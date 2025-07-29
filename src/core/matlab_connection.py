@@ -16,7 +16,7 @@ def search_sessions() -> list:
         logger.error("Error searching for MATLAB sessions", exc_info=True)
 
 
-def connect_session(session: str) -> matlab.engine_handling.Engine:
+def connect_session(session: str):
     logger.info(f"Connecting to MATLAB session: {session}")
     try:
         eng = matlab.engine.connect_matlab(session)
