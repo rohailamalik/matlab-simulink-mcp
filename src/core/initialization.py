@@ -1,0 +1,59 @@
+from config.settings import settings
+from utils.logger import logger
+from utils.utils import get_path
+import pickle 
+import json
+from typing import Optional
+
+
+def load_server_data() -> Optional[dict]:
+    if not settings.sl_lib_data_path:
+        logger.error("Server data path not configured.")
+        return None
+
+    sl_lib_data_path = get_path(settings.sl_lib_data_path)
+    ext = sl_lib_data_path.suffix.lower()
+
+    try:
+        if ext == ".json":
+            with open(sl_lib_data_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        elif ext in (".pkl", ".pickle"):
+            with open(sl_lib_data_path, "rb") as f:
+                return pickle.load(f)
+        else:
+            logger.error(f"Unsupported server data file extension: {ext}")
+    except FileNotFoundError:
+        logger.error("Server data file not found.")
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON format in server data file.")
+    except pickle.UnpicklingError:
+        logger.error("Invalid Pickle format in server data file.")
+    except Exception:
+        logger.error("Unexpected error while loading server data", exc_info=True)
+
+    return None
+
+
+def set_helpers(eng) -> bool:
+    if not settings.matlab_helpers_path:
+        logger.warning("MATLAB helpers path not set.")
+        return False
+
+    helpers_path = get_path(settings.matlab_helpers_path)  # returns Path object
+
+    if not helpers_path.is_dir():
+        logger.error(f"MATLAB helpers directory not found: {helpers_path}")
+        return False
+
+    m_files = [f for f in helpers_path.iterdir() if f.suffix == ".m"]
+    if not m_files:
+        logger.warning(f"No .m files found in helpers directory: {helpers_path}")
+
+    try:
+        eng.addpath(str(helpers_path), nargout=0)
+        logger.info("MATLAB helper functions loaded successfully.")
+        return True
+    except Exception:
+        logger.error("Failed to add MATLAB helper path", exc_info=True)
+        return False
