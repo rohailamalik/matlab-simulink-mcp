@@ -61,3 +61,24 @@
 2025-07-29 06:26:05,893 | INFO | Server data loaded from JSON.
 2025-07-29 06:26:05,978 | INFO | MATLAB helper functions added to path successfully.
 2025-07-29 06:26:05,978 | INFO | MATLAB MCP Server has shut down.
+2025-07-30 02:26:07,599 | INFO | Starting MATLAB MCP server...
+2025-07-30 02:26:07,599 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-30 02:26:07,608 | INFO | Found shared MATLAB sessions: ('MATLAB_9080',)
+2025-07-30 02:26:07,608 | INFO | Connecting to MATLAB session: MATLAB_9080
+2025-07-30 02:26:07,642 | INFO | Successfully connected to MATLAB.
+2025-07-30 02:26:07,642 | INFO | Server data loaded from JSON.
+2025-07-30 02:26:07,887 | INFO | MATLAB helper functions added to path successfully.
+2025-07-30 02:29:32,698 | INFO | Starting MATLAB MCP server...
+2025-07-30 02:29:32,698 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-30 02:29:32,698 | INFO | Found shared MATLAB sessions: ('MATLAB_9080',)
+2025-07-30 02:29:32,698 | INFO | Connecting to MATLAB session: MATLAB_9080
+2025-07-30 02:29:32,728 | INFO | Successfully connected to MATLAB.
+2025-07-30 02:29:32,729 | INFO | Server data loaded from JSON.
+2025-07-30 02:29:32,822 | INFO | MATLAB helper functions added to path successfully.
+2025-07-30 02:30:16,461 | INFO | Starting MATLAB MCP server...
+2025-07-30 02:30:16,461 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-30 02:30:16,461 | INFO | Found shared MATLAB sessions: ('MATLAB_9080',)
+2025-07-30 02:30:16,461 | INFO | Connecting to MATLAB session: MATLAB_9080
+2025-07-30 02:30:16,487 | INFO | Successfully connected to MATLAB.
+2025-07-30 02:30:16,487 | INFO | Server data loaded from JSON.
+2025-07-30 02:30:16,575 | INFO | MATLAB helper functions added to path successfully.

@@ -1,5 +1,5 @@
 from langgraph.prebuilt import create_react_agent
-from client import llm
+from llm.client import llm
 from core.tools import tools
 
 system_prompt = """
