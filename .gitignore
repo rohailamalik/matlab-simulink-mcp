@@ -6,7 +6,10 @@ dist/
 wheels/
 *.egg-info
 
-# Virtual environments
+# Environments
+.env
 .venv
 
+# Cache
 .vscode/
+slprj/

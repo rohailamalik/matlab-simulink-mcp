@@ -1,6 +1,6 @@
-from core.initialization import load_server_data, set_helpers
-from core.matlab_connection import search_sessions, connect_session
-import core.state
+from core.startup import load_server_data, set_helpers
+from core.eng_manager import search_sessions, connect_session
+from core.state import state
 from utils.logger import logger
 from fastmcp import FastMCP
 
@@ -19,15 +19,15 @@ def start_server():
             else:
                 session = input("Session not found. Please input a correct session name: ")
     
-    core.state.eng = connect_session(session)
-    core.state.sl_lib_data = load_server_data()
-    core.state.session_name = session
+    state["eng"] = connect_session(session)
+    state["sl_lib_data"] = load_server_data()
+    state["session_name"] = session
 
-    set_helpers(core.state.eng)
+    set_helpers(state["eng"])
 
     #mcp.run(transport='stdio')
 
-    logger.info("MATLAB MCP Server has shut down.")
+    #logger.info("MATLAB MCP Server has shut down.")
     
 
 
