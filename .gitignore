@@ -13,3 +13,6 @@ wheels/
 # Cache
 .vscode/
 slprj/
+
+# Logs
+*.log
