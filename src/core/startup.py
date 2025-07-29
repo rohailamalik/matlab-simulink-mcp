@@ -4,7 +4,6 @@ from utils.utils import get_path
 import pickle 
 import json
 from typing import Optional
-import sys
 
 
 def load_server_data() -> Optional[dict]:
