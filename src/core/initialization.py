@@ -4,6 +4,7 @@ from utils.utils import get_path
 import pickle 
 import json
 from typing import Optional
+import sys
 
 
 def load_server_data() -> Optional[dict]:
@@ -16,10 +17,13 @@ def load_server_data() -> Optional[dict]:
 
     try:
         if ext == ".json":
+
             with open(sl_lib_data_path, "r", encoding="utf-8") as f:
+                logger.info("Server data loaded from JSON.")
                 return json.load(f)
         elif ext in (".pkl", ".pickle"):
             with open(sl_lib_data_path, "rb") as f:
+                logger.info("Server data loaded from Pickle.")
                 return pickle.load(f)
         else:
             logger.error(f"Unsupported server data file extension: {ext}")
@@ -32,7 +36,6 @@ def load_server_data() -> Optional[dict]:
     except Exception:
         logger.error("Unexpected error while loading server data", exc_info=True)
 
-    return None
 
 
 def set_helpers(eng) -> bool:
@@ -40,7 +43,7 @@ def set_helpers(eng) -> bool:
         logger.warning("MATLAB helpers path not set.")
         return False
 
-    helpers_path = get_path(settings.matlab_helpers_path)  # returns Path object
+    helpers_path = get_path(settings.matlab_helpers_path)
 
     if not helpers_path.is_dir():
         logger.error(f"MATLAB helpers directory not found: {helpers_path}")
@@ -52,7 +55,7 @@ def set_helpers(eng) -> bool:
 
     try:
         eng.addpath(str(helpers_path), nargout=0)
-        logger.info("MATLAB helper functions loaded successfully.")
+        logger.info("MATLAB helper functions added to path successfully.")
         return True
     except Exception:
         logger.error("Failed to add MATLAB helper path", exc_info=True)

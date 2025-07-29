@@ -1,10 +1,10 @@
 from core.initialization import load_server_data, set_helpers
 from core.matlab_connection import search_sessions, connect_session
-import state
+import core.state
 from utils.logger import logger
 from fastmcp import FastMCP
 
-mcp = FastMCP("SimAI_MCP")
+#mcp = FastMCP("SimAI_MCP")
 
 def start_server():
     logger.info("Starting MATLAB MCP server...")
@@ -19,11 +19,13 @@ def start_server():
             else:
                 session = input("Session not found. Please input a correct session name: ")
     
-    state.eng = connect_session(session)
-    state.sl_lib_data = load_server_data()
-    set_helpers(state.eng)
+    core.state.eng = connect_session(session)
+    core.state.sl_lib_data = load_server_data()
+    core.state.session_name = session
 
-    mcp.run(transport='stdio')
+    set_helpers(core.state.eng)
+
+    #mcp.run(transport='stdio')
 
     logger.info("MATLAB MCP Server has shut down.")
     

@@ -1,0 +1,63 @@
+2025-07-29 06:16:27,536 | INFO | Starting MATLAB MCP server...
+2025-07-29 06:16:27,537 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-29 06:16:27,541 | INFO | Found shared MATLAB sessions: ('MATLAB_21148',)
+2025-07-29 06:16:27,541 | INFO | Connecting to MATLAB session: MATLAB_21148
+2025-07-29 06:16:27,584 | INFO | Successfully connected to MATLAB.
+2025-07-29 06:16:27,584 | ERROR | Server data file not found.
+2025-07-29 06:17:27,346 | INFO | Starting MATLAB MCP server...
+2025-07-29 06:17:27,346 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-29 06:17:27,347 | INFO | Found shared MATLAB sessions: ('MATLAB_21148',)
+2025-07-29 06:17:27,348 | INFO | Connecting to MATLAB session: MATLAB_21148
+2025-07-29 06:17:27,375 | INFO | Successfully connected to MATLAB.
+2025-07-29 06:17:27,376 | ERROR | Server data file not found.
+2025-07-29 06:17:27,887 | INFO | MATLAB helper functions loaded successfully.
+2025-07-29 06:17:27,888 | INFO | MATLAB MCP Server has shut down.
+2025-07-29 06:19:12,500 | INFO | Starting MATLAB MCP server...
+2025-07-29 06:19:12,500 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-29 06:19:12,500 | INFO | Found shared MATLAB sessions: ('MATLAB_21148',)
+2025-07-29 06:19:12,500 | INFO | Connecting to MATLAB session: MATLAB_21148
+2025-07-29 06:19:12,556 | INFO | Successfully connected to MATLAB.
+2025-07-29 06:19:12,556 | ERROR | Server data file not found.
+2025-07-29 06:19:12,688 | INFO | MATLAB helper functions added to path successfully.
+2025-07-29 06:19:12,688 | INFO | MATLAB MCP Server has shut down.
+2025-07-29 06:19:51,573 | INFO | Starting MATLAB MCP server...
+2025-07-29 06:19:51,573 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-29 06:19:51,587 | INFO | Found shared MATLAB sessions: ('MATLAB_21148',)
+2025-07-29 06:19:51,587 | INFO | Connecting to MATLAB session: MATLAB_21148
+2025-07-29 06:19:51,609 | INFO | Successfully connected to MATLAB.
+2025-07-29 06:19:51,609 | INFO | Loading server data from: C:\Data\Research\Doctoral\src\SimAI\src\data\sl_lib_data.json
+2025-07-29 06:19:51,609 | ERROR | Server data file not found.
+2025-07-29 06:19:51,722 | INFO | MATLAB helper functions added to path successfully.
+2025-07-29 06:19:51,722 | INFO | MATLAB MCP Server has shut down.
+2025-07-29 06:20:11,137 | INFO | Starting MATLAB MCP server...
+2025-07-29 06:20:11,137 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-29 06:20:11,137 | INFO | Found shared MATLAB sessions: ('MATLAB_21148',)
+2025-07-29 06:20:11,137 | INFO | Connecting to MATLAB session: MATLAB_21148
+2025-07-29 06:20:11,168 | INFO | Successfully connected to MATLAB.
+2025-07-29 06:20:11,169 | INFO | Loading server data from: C:\Data\Research\Doctoral\src\SimAI\src\data\sl_lib_data.json
+2025-07-29 06:20:11,169 | INFO | Loading server data as JSON.
+2025-07-29 06:20:11,169 | ERROR | Server data file not found.
+2025-07-29 06:20:11,271 | INFO | MATLAB helper functions added to path successfully.
+2025-07-29 06:20:11,272 | INFO | MATLAB MCP Server has shut down.
+2025-07-29 06:24:00,686 | INFO | Starting MATLAB MCP server...
+2025-07-29 06:24:00,686 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-29 06:24:00,686 | INFO | Found shared MATLAB sessions: ('MATLAB_21148',)
+2025-07-29 06:24:00,686 | INFO | Connecting to MATLAB session: MATLAB_21148
+2025-07-29 06:24:00,721 | INFO | Successfully connected to MATLAB.
+2025-07-29 06:24:00,824 | INFO | MATLAB helper functions added to path successfully.
+2025-07-29 06:24:00,824 | INFO | MATLAB MCP Server has shut down.
+2025-07-29 06:24:23,220 | INFO | Starting MATLAB MCP server...
+2025-07-29 06:24:23,220 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-29 06:24:23,225 | INFO | Found shared MATLAB sessions: ('MATLAB_21148',)
+2025-07-29 06:24:23,225 | INFO | Connecting to MATLAB session: MATLAB_21148
+2025-07-29 06:24:23,242 | INFO | Successfully connected to MATLAB.
+2025-07-29 06:24:23,339 | INFO | MATLAB helper functions added to path successfully.
+2025-07-29 06:24:23,339 | INFO | MATLAB MCP Server has shut down.
+2025-07-29 06:26:05,868 | INFO | Starting MATLAB MCP server...
+2025-07-29 06:26:05,868 | INFO | Searching for shared MATLAB Desktop sessions...
+2025-07-29 06:26:05,868 | INFO | Found shared MATLAB sessions: ('MATLAB_21148',)
+2025-07-29 06:26:05,868 | INFO | Connecting to MATLAB session: MATLAB_21148
+2025-07-29 06:26:05,893 | INFO | Successfully connected to MATLAB.
+2025-07-29 06:26:05,893 | INFO | Server data loaded from JSON.
+2025-07-29 06:26:05,978 | INFO | MATLAB helper functions added to path successfully.
+2025-07-29 06:26:05,978 | INFO | MATLAB MCP Server has shut down.
