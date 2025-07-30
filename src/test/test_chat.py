@@ -1,10 +1,10 @@
 from llm.agent import SimAgent
 from core.server import start_server
 from langchain_core.messages import HumanMessage
-from core.state import state
+from core.state import server_state
 
 start_server()
-print(state["eng"])
+print(server_state.eng) #TODO: figure out why this is None when llm calls tools and solve this. 
 
 def respond(user_input: str, chat_history):
     chat_history["messages"].append(HumanMessage(content=user_input))
