@@ -1,14 +1,11 @@
 import os
 import inspect
 import sys
-from core.state import state
+from core.state import get_engine, get_sl_lib_data 
 from typing import Optional
 from difflib import get_close_matches
 import matlab.engine
 from langchain_core.tools import tool, BaseTool
-
-eng = state["eng"]
-sl_lib_data = state["sl_lib_data"]
 
 @tool
 def open_simulink_file(file_name: str, get_content: bool = True, open_in_desktop: bool = False) -> Optional[dict]:
@@ -23,6 +20,8 @@ def open_simulink_file(file_name: str, get_content: bool = True, open_in_desktop
     Returns:
         Description of the system inside the Simulink file as a dictionary.
     """
+
+    eng = get_engine()
 
     if not file_name.endswith(".slx"):
         raise ValueError("Please only use a .slx file.")
@@ -58,6 +57,8 @@ def open_matlab_file(file_name: str, get_content: bool = True, open_in_desktop: 
     Returns:
         Code inside the script (if asked), as a string.
     """
+
+    eng = get_engine()
 
     if not file_name.endswith(".m"):
         raise ValueError("Please only use a .m file.")
@@ -97,13 +98,15 @@ def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
         Confirmation message if saved. Error message if validation fails.
     """
 
+    eng = get_engine()
+
     if not file_name.endswith(".m"):
         raise ValueError("Please use a .m file.")
 
-    cwd = eng.pwd()
+    cwd = eng.pwd() # TODO: Possible source of `ValueError('only a scalar struct can be returned from MATLAB')`
     file_path = os.path.join(cwd, file_name)
 
-    if not overwrite and eng.exist(file_name, "file") == 2:
+    if not overwrite and eng.exist(file_name, "file") == 2: # TODO: Possible source of `ValueError('only a scalar struct can be returned from MATLAB')`
         return f"'{file_name}' already exists in MATLAB's current working folder."
 
     with open(file_path, "w", encoding="utf-8") as f:
@@ -111,7 +114,7 @@ def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
 
     eng.addpath(cwd, nargout=0)
 
-    result = eng.checkcode(file_path, nargout=1)
+    result = eng.checkcode(file_path, nargout=1) # TODO: Possible source of `ValueError('only a scalar struct can be returned from MATLAB')`
     if result:
         os.remove(file_path)
         messages = [msg.message for msg in result]
@@ -134,6 +137,8 @@ def run_matlab_code(code: str, variables: list[str] = None) -> dict:
         A dictionary of asked variables and their values (converted to Python)
     """
 
+    eng = get_engine()
+
     try:
         eng.eval(code, nargout=0)
     except Exception as e:
@@ -155,6 +160,8 @@ def get_workspace_summary():
     Returns a summary of current MATLAB workspace: variable names, sizes, and types.
     """
 
+    eng = get_engine()
+
     info = eng.eval("whos", nargout=1)
 
     return info
@@ -170,6 +177,9 @@ def search_library(query) -> dict:
     Returns:
         A list of paths of blocks with similar names.
     """
+
+    eng = get_engine()
+    sl_lib_data = get_sl_lib_data()
 
     n = 2
     cutoff = 0.5
