@@ -6,6 +6,7 @@ from typing import Optional
 from difflib import get_close_matches
 import matlab.engine
 from langchain_core.tools import tool, BaseTool
+from utils.type_converters import fetch
 
 @tool
 def open_simulink_file(file_name: str, get_content: bool = True, open_in_desktop: bool = False) -> Optional[dict]:
@@ -84,7 +85,7 @@ def open_matlab_file(file_name: str, get_content: bool = True, open_in_desktop: 
 
     return content
 
-@tool
+
 def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
     """
     Validates and saves MATLAB code to a .m file in the current MATLAB working directory.
@@ -103,10 +104,10 @@ def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
     if not file_name.endswith(".m"):
         raise ValueError("Please use a .m file.")
 
-    cwd = eng.pwd() # TODO: Possible source of `ValueError('only a scalar struct can be returned from MATLAB')`
+    cwd = eng.pwd() 
     file_path = os.path.join(cwd, file_name)
 
-    if not overwrite and eng.exist(file_name, "file") == 2: # TODO: Possible source of `ValueError('only a scalar struct can be returned from MATLAB')`
+    if not overwrite and eng.exist(file_name, "file") == 2: 
         return f"'{file_name}' already exists in MATLAB's current working folder."
 
     with open(file_path, "w", encoding="utf-8") as f:
@@ -114,7 +115,12 @@ def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
 
     eng.addpath(cwd, nargout=0)
 
-    result = eng.checkcode(file_path, nargout=1) # TODO: Possible source of `ValueError('only a scalar struct can be returned from MATLAB')`
+    try: 
+        # Checkcode returns a structure array (which isn't converted between MATLAB and python) in case of errors.
+        #Hence we convert it to a JSON string.
+        result = eng.eval(f"jsonencode(checkcode({file_name}))") # TODO: Possible source of `ValueError('only a scalar struct can be returned from MATLAB')`
+    except Exception as e:
+            raise RuntimeError(f"Error when validating the code file {file_name}: {e}") from e
     if result:
         os.remove(file_path)
         messages = [msg.message for msg in result]
@@ -125,13 +131,13 @@ def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
     return f"Code saved successfully as {file_name}."
 
 @tool
-def run_matlab_code(code: str, variables: list[str] = None) -> dict:
+def run_matlab_code(code: str, variables: list[str] = None) -> dict: #TODO: solve the double quotation problem thing... eng.eval("whos(\"nb\")")
     """
-    Executes MATLAB code and retrieves values of specified variables from it.
+    Executes MATLAB code and retrieves values of specified variables from workspace.
 
     Parameters:
-        code: MATLAB code to run
-        variables: list of variable names to retrieve from MATLAB workspace after the code is ran. Leave empty if no variables are needed.
+        code: MATLAB code to run. Leave empty if no code is needed to run.
+        variables: list of variable names to retrieve from MATLAB workspace after the code is ran. Leave empty if no variables are needed. Use "ans" as the variable when no specific variable is used in the code.
 
     Returns:
         A dictionary of asked variables and their values (converted to Python)
@@ -139,18 +145,16 @@ def run_matlab_code(code: str, variables: list[str] = None) -> dict:
 
     eng = get_engine()
 
-    try:
-        eng.eval(code, nargout=0)
-    except Exception as e:
-        raise RuntimeError(f"MATLAB execution failed: {e}")
+    if code:
+        try:
+            eng.eval(code)
+        except Exception as e:
+            raise RuntimeError(f"MATLAB execution failed: {e}")
 
     result = {}
     if variables:
         for var in variables:
-            try:
-                result[var] = eng.workspace[var]
-            except Exception:
-                result[var] = None
+            result[var] = fetch(var, eng)
 
     return result
 
