@@ -47,7 +47,7 @@ function system_data = describe_system(system_path)
     system.Elements = elements;
     system.Connections = connections; 
 
-    %system_data = jsonencode(system);
-    system_data = system;
+    system_data = jsonencode(system);
+    %system_data = system;
 
 end
