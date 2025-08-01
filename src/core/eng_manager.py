@@ -22,7 +22,7 @@ def connect_session(session: str):
         eng = matlab.engine.connect_matlab(session)
         logger.info("Successfully connected to MATLAB.")
         return eng
-    except matlab.engine_handling.EngineError as e:
+    except matlab.engine.EngineError as e:
         logger.error(f"Failed to connect to MATLAB: {e}", exc_info=True)
     except Exception as e:
         logger.error("Unexpected error during MATLAB connection", exc_info=True)

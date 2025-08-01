@@ -10,12 +10,13 @@ import numpy as np
 from typing import Any, Dict, List 
 import matlab.engine
 
+
 def reshape_recursive(flat_list: List[Any], shape: List[int]) -> List[Any]:
     """
     Reshape a flat list into a nested list with the given shape (e.g., [2, 3] for 2x3).
     Works for string, char, and cell array conversions.
     """
-    
+
     def _reshape(data, dims):
         if len(dims) == 1:
             return data
@@ -28,16 +29,16 @@ def reshape_recursive(flat_list: List[Any], shape: List[int]) -> List[Any]:
 def convert_supported(data: Any):
 
     # Automatically converted by MATLAB to native Python types
-    if isinstance(data, (int, float, bool, str, type(None))):
+    if isinstance(data, (int, float, bool, str, dict, type(None))):
         return data
     
-    # MATLAB numeric arrays. Auto-converted to matlab.double objects, not lists
+    # MATLAB numeric arrays. By default Auto-converted to matlab.double objects, not lists
     elif isinstance(data, matlab.double):
         np_array = np.array(data).squeeze()
         if np_array.ndim == 0: return float(np_array)
         return np_array.tolist() 
     
-    # MATLAB logical arrays. Auto-converted to matlab.logical objects, not lists
+    # MATLAB logical arrays. By default Auto-converted to matlab.logical objects, not lists
     elif isinstance(data, matlab.logical):
         np_array = np.array(data).squeeze()
         if np_array.ndim == 0: return bool(np_array)
@@ -48,8 +49,9 @@ def flatten_struct_array(array_name: str, eng):
     "Converts a MATLAB struct array to a flattened list of dictionaries."
 
     # Even 1D Struct arrays cannot be fetched so we need to save the flattened array to workspace as a temporary variable.
-    eng.eval(f"temp={array_name}(:)") 
-    length = int(eng.eval("length(temp)"))
+    # eval does not allow = assignment, so we use assignin for above-mentioned purpose.
+    eng.eval(f"assignin('base', 'temp', {array_name}(:))")
+    length = int(eng.length("temp"))
     converted_array = []
 
     for i in range(length):
@@ -88,7 +90,7 @@ def convert_non_supported(array_name: str, eng):
     return reshape_recursive(flat_array, shape)
 
 
-def fetch(var: str, eng):
+def fetch(eng, var: str):
     """
     Attempts to fetch a variable from MATLAB in decreasing order of compatibility:
     1. Direct fetch + supported conversion
@@ -109,6 +111,27 @@ def fetch(var: str, eng):
             last_error = e  
 
     raise RuntimeError(f"Failed to fetch variable '{var}': {last_error}") from last_error
+
+
+def batch_fetch(eng, variables: List[str], convert: bool = False) -> Dict[str, Any]:
+    """Fetches several variables from MATLAB workspace and optionally converts them to Python types."""
+    
+    result = {}
+
+    for var in variables:
+        try:
+            if var in eng.workspace:
+                if convert:
+                    result[var] = fetch(eng, var)
+                else:
+                    result[var] = eng.evalc(f"{var}", nargout=1)
+            else:
+                result[var] = "Variable not found in MATLAB workspace."
+            return result
+        
+        except Exception as e:
+            return RuntimeError(f"Error fetching variable '{var}': {e}")
+
 
             
     
