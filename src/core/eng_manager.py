@@ -2,6 +2,7 @@ from utils.logger import logger
 import matlab.engine
 import sys
 
+
 def search_sessions() -> list:
     try:
         logger.info("Searching for shared MATLAB Desktop sessions...")

@@ -118,9 +118,12 @@ def batch_fetch(eng, variables: List[str], convert: bool = False) -> Dict[str, A
     
     result = {}
 
+
+
     for var in variables:
         try:
-            if var in eng.workspace:
+            # Cannot do "if in eng.workspace" since it is not a native Python dict, rather a MATLAB object with some dict-like properties.
+            if eng.exist(var, "var") == 1:
                 if convert:
                     result[var] = fetch(eng, var)
                 else:

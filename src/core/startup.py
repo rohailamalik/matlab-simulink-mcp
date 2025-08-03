@@ -4,6 +4,8 @@ from utils.utils import get_path
 import pickle 
 import json
 from typing import Optional
+import tempfile
+from pathlib import Path
 
 
 def load_server_data() -> Optional[dict]:
@@ -36,17 +38,14 @@ def load_server_data() -> Optional[dict]:
         logger.error("Unexpected error while loading server data", exc_info=True)
 
 
-
-def set_helpers(eng) -> bool:
+def set_helpers(eng) -> str:
     if not settings.matlab_helpers_path:
         logger.warning("MATLAB helpers path not set.")
-        return False
 
     helpers_path = get_path(settings.matlab_helpers_path)
 
     if not helpers_path.is_dir():
         logger.error(f"MATLAB helpers directory not found: {helpers_path}")
-        return False
 
     m_files = [f for f in helpers_path.iterdir() if f.suffix == ".m"]
     if not m_files:
@@ -55,7 +54,16 @@ def set_helpers(eng) -> bool:
     try:
         eng.addpath(str(helpers_path), nargout=0)
         logger.info("MATLAB helper functions added to path successfully.")
-        return True
+        return str(helpers_path)
+
     except Exception:
         logger.error("Failed to add MATLAB helper path", exc_info=True)
-        return False
+
+
+def set_up_canvas():
+    """
+    Returns path to a MATLAB script file in the temporary files directory.
+    This is the file where any arbitrary code is executed.
+    """
+    return str(Path(tempfile.gettempdir()) / "canvas.m")
+
