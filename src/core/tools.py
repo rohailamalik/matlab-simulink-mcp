@@ -5,6 +5,7 @@ import tempfile
 from difflib import get_close_matches
 from core.state import get_state 
 from utils.converters import fetch, batch_fetch
+from utils.security import check_code
 from langchain_core.tools import tool, BaseTool
 from pathlib import Path
 
@@ -12,35 +13,43 @@ from pathlib import Path
 @tool
 def open_simulink_file(file_name: str, get_content: bool = True, open_in_desktop: bool = False) -> dict | str:
     """
-    Opens a Simulink file and/or returns its content.
+    Opens a Simulink file (only in the current working) and/or returns its content.
 
-    Parameters:
-        file_name: Simulink file name with .slx extension
-        get_content: whether to return the content/system in the Simulink file. True by default.
-        open_in_desktop: whether to open the Simulink file in MATLAB desktop. False by default.
+    Arguments:
+        file_name: Relative path to Simulink file, with .slx extension. 
+        get_content: Whether to return textual representation of content in the Simulink file. True by default.
+        open_in_desktop: Whether to open the Simulink file in MATLAB desktop. False by default.
 
     Returns:
-        If asked, description of the system inside the Simulink file as a dictionary.
+        If asked, description of the content inside the Simulink file as a dictionary.
     """
 
-    eng = get_state("eng")
+    path = Path(file_name)
+    
+    if not get_state("advanced_security"):
+        if path.is_absolute() or any(part == ".." for part in path.parts):
+            raise PermissionError("Access to absolute or parent paths is forbidden. Only files in current working directory are usable.")
 
-    if not file_name.endswith(".slx"):
+    if path.suffix != ".slx":
         raise ValueError("Only .slx files are supported.")
+    
+    cwd = get_state("cwd")
 
-    if eng.exist(file_name, "file") == 0:
-        raise FileNotFoundError(f"'{file_name}' not found in MATLAB's current working directory.")
-
-    eng.load_system(file_name)
+    if not (cwd / path).is_file():
+        raise FileNotFoundError(f"'{file_name}' not found in MATLAB's current working directory.")   
+    
+    eng = get_state("eng")
 
     if open_in_desktop:
         try:
             if eng.usejava("desktop"):
                 eng.open_system(file_name, nargout=0)
             else:
-                raise RuntimeError("Failed to open in desktop. MATLAB desktop is not running")
+                raise RuntimeError("Error. MATLAB desktop is not running")
         except Exception as e:
-            raise RuntimeError(f"Unexpected error while opening Simulink file in desktop: {e}")
+            raise RuntimeError(f"Unexpected error while opening in desktop: {e}")
+    else: 
+        eng.load_system(file_name)
 
     if get_content:
         try:
@@ -56,33 +65,41 @@ def open_simulink_file(file_name: str, get_content: bool = True, open_in_desktop
 @tool
 def open_matlab_file(file_name: str, get_content: bool = True, open_in_desktop: bool = False) -> str:
     """
-    Returns the content of a matlab script file and/or opens it in MATLAB desktop.
+    Returns the content of a matlab script and/or opens it in MATLAB desktop.
 
-    Parameters:
-        file_name: script file name with .m extension
-        get_content: whether to return the code in the script file. True by default
-        open_in_desktop: whether to open the script in MATLAB desktop. False by default
+    Arguments:
+        file_name: Relative path to MATLAB script, with .m extension. 
+        get_content: Whether to return code inside the script. True by default.
+        open_in_desktop: Whether to open the script in MATLAB desktop. False by default.
 
     Returns:
         If asked, code inside the script as a string.
     """
 
-    eng = get_state("eng")
+    path = Path(file_name)
 
-    if not file_name.endswith(".m"):
-        raise ValueError("Only .m files can be opened.")
+    if not get_state("advanced_security"):
+        if path.is_absolute() or any(part == ".." for part in path.parts):
+            raise PermissionError("Access to absolute or parent paths is forbidden. Only files in current working directory are usable.")
+
+    if path.suffix != ".m":
+        raise ValueError("Only .m files are supported.")
     
-    if eng.exist(file_name, "file") == 0:
-        raise FileNotFoundError(f"'{file_name}' not found in MATLAB's current working directory.")
+    cwd = get_state("cwd")
+
+    if not (cwd / path).is_file():
+        raise FileNotFoundError(f"'{file_name}' not found in MATLAB's current working directory.") 
+    
+    eng = get_state("eng")
     
     if open_in_desktop:
         try:
             if eng.usejava("desktop"):
                 eng.edit(file_name, nargout=0)
             else:
-                raise RuntimeError("Failed to open. MATLAB desktop is not running.")
+                raise RuntimeError("Failed to open in desktop. MATLAB desktop is not running")
         except Exception as e:
-            raise RuntimeError(f"Unexpected error while opening MATLAB file in desktop: {e}")
+            raise RuntimeError(f"Unexpected error while opening in desktop: {e}")
 
     if get_content: 
         try:
@@ -98,30 +115,38 @@ def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
     """
     Validates and saves MATLAB code to a .m file in the current MATLAB working directory.
 
-    Parameters:
+    Arguments:
         code: MATLAB code as a string
-        file_name: script name with .m extension
-        overwrite: whether to overwrite if the file already exists. False by default
+        file_name: Script name with .m extension. Use relative paths if needed. If a folder in the path does not exist, it will automatically be created.
+        overwrite: Whether to overwrite if the file already exists. False by default
 
     Returns:
         Confirmation message with validation errors if any.
     """
 
+    path = Path(file_name)
+
+    if not get_state("advanced_security"):
+        if path.is_absolute() or any(part == ".." for part in path.parts):
+            raise PermissionError("Access to absolute or parent paths is forbidden. Only files in current working directory are usable.")
+
+    if path.suffix != ".m":
+        raise ValueError("Only .m files are supported.")
+    
+    if not path.stem.isidentifier():
+        raise ValueError("File name must be a valid MATLAB identifier.") 
+    
+    cwd = get_state("cwd")
+
+    if not overwrite and (cwd / path).is_file(): 
+        raise RuntimeError(f"'{file_name}' already exists in MATLAB's current working directory.")  
+    
+    file_path = cwd / path
     eng = get_state("eng")
 
-    if not file_name.endswith(".m"):
-        raise ValueError("Please save as a .m file.")
-    
-    if not file_name.isidentifier():
-        raise ValueError("File name must be a valid MATLAB identifier.")
-    
-    if not overwrite and eng.exist(file_name, "file") == 2: 
-        raise FileNotFoundError(f"'{file_name}' already exists in MATLAB's current working directory.")
-
-    file_path = Path(eng.pwd()) / file_name
-
     try:
-        with open(file_path, "w", encoding="utf-8") as f:
+        file_path.parent.mkdir(parents=True, exist_ok=True) # Create parent folders in case they don't exist.
+        with file_path.open("w") as f:
             f.write(code)
     except Exception as e:
         raise RuntimeError(f"Error saving the code file {file_name} in current working directory: {e}")
@@ -132,13 +157,15 @@ def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
         raise RuntimeError(f"Error validating the code file {file_name}: {e}") 
     
     if issues:
-        return f"{file_name} saved but failed validation with following errors:\n" + "\n".join(issues)
-
-    return f"Code validated and saved successfully as {file_name}."
+        file_path.unlink()
+        return f"{file_name} not saved as it failed validation with following errors:\n" + "\n".join(issues)
+    
+    else:
+        return f"Code validated and saved successfully as {file_name}."
 
 
 @tool
-def run_matlab_code(code: str, variables: list[str] = None, convert= False) -> str:
+def run_matlab_code(code: str) -> str:
     """
     Executes MATLAB code, and returns whatever is displayed in the MATLAB command window, wrapped in a string.
 
@@ -150,21 +177,28 @@ def run_matlab_code(code: str, variables: list[str] = None, convert= False) -> s
     """
 
     eng = get_state("eng")
-    canvas_path = get_state("canvas_path")
+    file_path = get_state("cwd") / "canvas.m"
+
+    if not get_state("advanced_security"):
+        try:
+            issues = check_code(code)
+            if issues:
+                raise PermissionError(issues)
+        except Exception as e:
+            raise RuntimeError(f"Failed to check code for security: {e}")
 
     try:
         # eval does not support multi-line code, so we write it to the canvas (i.e. a temporary file) and run it through evalc.
         # evalc also returns whatever is printed to command window as a string, so it helps with disp functions etc.
         # TODO: Later it will be replaced by a canvas-based editor.
-        with open(canvas_path, "w", encoding="utf-8") as f:
+        with file_path.open("w") as f:
             f.write(code)
 
-        output = eng.evalc(f"run('{canvas_path}')", nargout = 1)
+        return eng.evalc("run('{file_path}')", nargout = 1)
 
     except Exception as e:
         raise RuntimeError(f"MATLAB execution failed: {e}")
-    
-    return output
+
 
 @tool
 def get_variables(variables: list[str], convert = False) -> dict:
@@ -172,11 +206,11 @@ def get_variables(variables: list[str], convert = False) -> dict:
     Fetches specified variables from MATLAB workspace.
 
     Parameters:
-        variables: list of variable names to retrieve from current MATLAB workspace after the code is ran.
-        convert: whether to convert the variables to Python types. When False, the values will be returned as string-wrapped MATLAB types. False by default.
+        variables: List of variable names to retrieve from workspace.
+        convert: Whether to convert the variables to Python types. When False, the values will be returned as string-wrapped MATLAB types. False by default.
 
     Returns:
-        A dictionary of asked variables and their values.
+        A dictionary of variables and their values.
     """
 
     eng = get_state("eng")
@@ -186,7 +220,7 @@ def get_variables(variables: list[str], convert = False) -> dict:
     for var in variables:
         try:
             # Cannot do "if in eng.workspace" since it is not a native Python dict, rather a MATLAB object with some dict-like properties.
-            if eng.exist(var, "var") == 1:
+            if eng.exist(var, "var") == 1: # This automatically ensures that the var is a proper variable name, without any code injection which could execute through evalc
                 if convert:
                     result[var] = fetch(eng, var)
                 else:

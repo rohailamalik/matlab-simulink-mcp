@@ -4,7 +4,6 @@
 # This is different from json/string based conversion which returns values as strings. useful for viewing data in a human-readable format, such as by the llm. 
 # So we will use that one, and this could be perhaps useful elsewhere.
 
-from core.state import get_engine
 import math
 import numpy as np
 from typing import Any, Dict, List 
