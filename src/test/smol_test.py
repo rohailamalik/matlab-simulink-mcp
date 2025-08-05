@@ -1,45 +1,18 @@
 from core.server import start_server
-import math
-import numpy as np
-from typing import Any, Dict, List 
-from core.tools import open_matlab_file, open_simulink_file, save_matlab_code, get_variables, get_workspace_summary, search_library, run_matlab_code
-
+from pathlib import Path
 
 import matlab.engine
 start_server()
-from core.state import server_state, get_engine
+from core.state import server_state, get_state
+from core.tools import open_matlab_file
 
 
-from utils.converters import fetch, batch_fetch, convert_supported, convert_non_supported, flatten_struct_array, reshape_recursive      
+start_server()
 
-eng = server_state.eng
+file_name = "C:\Data\Research\Doctoral\src\SimAI\server.m"
+
+status = open_matlab_file(file_name)
+print(status)
 
 import IPython; IPython.embed()
 
-#huh = batch_fetch(eng, ["str"], convert=False)
-#print(huh)
-
-
-code = """
-
-x = linspace(1, 10, 1000);
-y = sin(x) + cos(x);
-
-z = zeros(size(x));
-for i = 2:length(x)
-    z(i) = z(i-1) + y(i);
-end
-
-disp('x:');
-disp(x);
-disp('y:');
-disp(y);
-disp('z:');
-disp(z);
-
-
-
-"""
-
-result = eng.evalc(code)
-print(result)

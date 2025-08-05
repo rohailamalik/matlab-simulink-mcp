@@ -1,1 +1,1 @@
-disp(5);
+delete('file.txt');
