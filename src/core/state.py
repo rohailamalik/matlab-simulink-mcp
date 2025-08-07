@@ -1,31 +1,36 @@
-from dataclasses import dataclass
-from typing import Optional, Literal
-import matlab.engine 
-from pathlib import Path
+from dataclasses import dataclass, field, fields
+from typing import Optional, List
+import matlab.engine
+import re
+from core.startup import load_blacklist, load_simlib_data, set_helpers, set_sandbox, connect_session
 
 @dataclass
 class ServerState:
+    """Global state for a MATLAB MCP session."""
     session: Optional[str] = None
     eng: Optional[matlab.engine.MatlabEngine] = None
-    sl_lib_data: Optional[dict] = None
-    helpers_path: Optional[Path] = None
-    security_wrappers_path: Optional[Path] = None
-    cwd: Optional[Path] = None
-    advanced_security: bool = False
+    simlib: Optional[dict] = None
+    blacklist: Optional[List[re.Pattern]] = None
+    sandbox: bool = False # will be removed. too volatile
+
+    def validate(self):
+        """Ensures all attributes are set."""
+        for f in fields(self):
+            if getattr(self, f.name) is None:
+                raise ValueError(f"Required attribute '{f.name}' is not set.")
+            
+    def set(self, session):
+        """Sets up the state for a given session."""
+        self.session = session
+        self.eng = connect_session(self.session)
+        self.simlib = load_simlib_data()
+        self.blacklist = load_blacklist()
+        set_helpers(self.eng)
 
 
-server_state = ServerState()
+state = ServerState()
 
+def get_state() -> ServerState:
+    return state
 
-def get_state(key: str):
-     
-     if not hasattr(server_state, key):
-        raise AttributeError(f"'{key}' is not a valid state attribute.")
-
-     value = getattr(server_state, key)
-     
-     if value is None:
-        raise ValueError(f"'{key}' has not been set yet.")
-     
-     return value
 

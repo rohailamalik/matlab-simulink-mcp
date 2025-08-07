@@ -1,27 +1,32 @@
-from core.startup import load_server_data, set_helpers, set_cwd, set_security
-from core.eng_manager import search_sessions, connect_session
-from core.state import server_state
+from core.startup import search_sessions
+from core.state import get_state
 from utils.logger import logger
 
+
 def start_server():
-    logger.info("Starting MATLAB MCP server...")
-    sessions = search_sessions()
+    logger.info("Searching for shared MATLAB sessions...")
+
+    sessions = []
+    while not sessions:
+        sessions = search_sessions() or []
+        if not sessions:
+            logger.info("No shared MATLAB sessions found.")
+            logger.info("In MATLAB, run: matlab.engine.shareEngine")
+            input("Press enter to retry.")
+
     if len(sessions) == 1:
         session = sessions[0]
     else:
-        session = input("Multiple sessions found. Enter the session name to connect: ")
-        while True:     
+        logger.info(f"Multiple sessions found: {sessions}")
+        while True:
+            session = input("Enter session name to connect: ")
             if session in sessions:
                 break
-            else:
-                session = input("Session not found. Please input a correct session name: ")
-    
-    server_state.session = session
-    server_state.eng = connect_session(session)
-    server_state.cwd = set_cwd(server_state.eng)
-    server_state.helpers_path = set_helpers(server_state.eng)
-    server_state.sl_lib_data = load_server_data()
-    server_state.advanced_security = set_security(server_state.eng)
+            logger.info("Session not found. Please input a correct session name.")
+
+    get_state().set(session)
+    logger.info(f"Connected to MATLAB session: {session}")
+    get_state().validate()
 
 
 

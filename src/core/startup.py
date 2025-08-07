@@ -1,95 +1,111 @@
-from config.settings import settings
-from utils.logger import logger
-from utils.utils import get_path
-import pickle 
+import re
 import json
-from typing import Optional
-from pathlib import Path
+import matlab.engine
+from typing import List
+from config.settings import settings
+from utils.utils import get_path
+from utils.converters import cmd_to_regex
 
 
-def load_server_data() -> Optional[dict]:
-    if not settings.sl_lib_data_path:
-        logger.error("Server data path not configured.")
-        return None
+def search_sessions() -> list:
+    """Searches and returns a list of shared MATLAB sessions."""
+    try:
+        return matlab.engine.find_matlab()
+    except Exception as e:
+        raise RuntimeError(f"Error searching for MATLAB sessions: {e}")
 
-    path = get_path(settings.sl_lib_data_path)  # ensures absolute Path
-    ext = path.suffix.lower()
+
+def connect_session(session: str):
+    """Connects to a shared MATLAB sessions."""
+    try: 
+        eng = matlab.engine.connect_matlab(session)
+        return eng
+    except matlab.engine.EngineError as e:
+        raise RuntimeError(f"Failed to connect to MATLAB session {session}: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error during MATLAB connection: {e}")
+    
+
+def load_simlib_data() -> dict:
+    """Loads the dictionary based data for Simulink model library"""
+
+    simlib_path = settings.simlib_database_path
+    
+    if not simlib_path:
+        raise ValueError("Simulink Library data file path not configured.")
+
+    path = get_path(simlib_path)
 
     try:
-        if ext == ".json":
-            with path.open("r", encoding="utf-8") as f:
-                logger.info(f"Server data loaded from JSON: {path}")
-                return json.load(f)
-
-        elif ext in {".pkl", ".pickle"}:
-            with path.open("rb") as f:
-                logger.info(f"Server data loaded from Pickle: {path}")
-                return pickle.load(f)
-
-        logger.error(f"Unsupported server data file extension: {ext}")
-
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
     except FileNotFoundError:
-        logger.error(f"Server data file not found: {path}")
+        raise FileNotFoundError(f"Simulink Library data file not found in {path}")
     except json.JSONDecodeError:
-        logger.error(f"Invalid JSON format in: {path}")
-    except pickle.UnpicklingError:
-        logger.error(f"Invalid Pickle format in: {path}")
-    except Exception:
-        logger.error("Unexpected error while loading server data", exc_info=True)
+        raise TypeError(f"Invalid JSON format for Simulink Library data file.")
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error while loading server Simulink Library data: {e}")
+    
 
-    return None
+def load_blacklist() -> List[re.Pattern]:
+    """Loads blacklisted commands from a text file, ignoring comments and empty lines."""
+
+    path = settings.blacklist_commands_path
+
+    try:
+        patterns = []
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                pattern = cmd_to_regex(stripped)
+                patterns.append(pattern)
+        return patterns
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Blacklisted commands file not found in {path}")
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error while loading blacklisted commands: {e}")
 
 
-def set_helpers(eng) -> str:
-    if not settings.matlab_helpers_path:
-        logger.warning("MATLAB helpers path not set.")
-        return None
+def set_sandbox(eng) -> bool:
+    """Sets up the sandbox mode (high security, wrapping all interactions with files)"""
 
-    path = get_path(settings.matlab_helpers_path)
+    wrappers_path = settings.security_wrappers_path
+
+    if not wrappers_path:
+        raise ValueError("MATLAB security wrappers path not configured.")
+    
+    path = get_path(wrappers_path)
+
+    try: 
+        if settings.sandbox:
+            eng.addpath(str(path), '-begin', nargout=0)
+        else: 
+            eng.builtin('rmpath', str(path), nargout=0)
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error while setting up sandbox mode: {e}")
+    
+    return settings.sandbox
+        
+
+def set_helpers(eng):
+    """Add MATLAB helper functions used in the tools to the MATLAB path"""
+
+    helpers_path = settings.matlab_helpers_path
+
+    if not helpers_path:
+        raise ValueError("MATLAB helpers path not configured.")
+
+    path = get_path(helpers_path)
 
     if not path.is_dir():
-        logger.error(f"MATLAB helpers directory not found: {path}")
-
-    files = [f for f in path.iterdir() if f.suffix == ".m"]
-
-    if not files:
-        logger.warning(f"No .m files found in helpers directory: {path}")
+        raise FileNotFoundError(f"MATLAB helpers directory not found: {path}")
 
     try:
         eng.addpath(str(path), nargout=0)
-        logger.info("MATLAB helper functions added to path successfully.")
-        return str(path)
-
-    except Exception:
-        logger.error("Failed to add MATLAB helper path", exc_info=True)
-        return None
-
-
-def set_cwd(eng):
-    """
-    Returns path to the current working directory. 
-    The LLM strictly cannot go outside this working directory and will only execute code through a temporary file in this directory.
-    """
-    try:
-        logger.info("Getting current working directory")
-        path = Path(str(eng.pwd))
-        logger.info("Got current working directory")
-        return path
-    except Exception:
-        logger.error("Unexpected error while getting current working directory", exc_info=True)
-        return None
-    
-def set_security(eng):
-    try: 
-        path = settings.security_wrappers_path
-        if settings.advanced_security:
-            eng.addpath(str(path), '-begin', nargout=0)
-        logger.info(f"Security level set to: {settings.advanced_security}")
-        return path
-    except Exception:
-        logger.error("Unexpected error while getting setting up security mode", exc_info=True)
-        return None
-
+    except Exception as e:
+        raise RuntimeError("Failed to add MATLAB helper path: {e}")
 
 
 

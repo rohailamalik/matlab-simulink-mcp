@@ -2,17 +2,15 @@ from core.server import start_server
 from pathlib import Path
 
 import matlab.engine
-start_server()
-from core.state import server_state, get_state
-from core.tools import open_matlab_file
+from core.tools import open_matlab_file, open_simulink_file, save_matlab_code, run_matlab_code, get_variables, get_workspace_summary, search_library
 
 
 start_server()
 
-file_name = "C:\Data\Research\Doctoral\src\SimAI\server.m"
+#file_name = "brain.m"
 
-status = open_matlab_file(file_name)
-print(status)
+#status = open_matlab_file(file_name)
+#print(status)
 
 import IPython; IPython.embed()
 
