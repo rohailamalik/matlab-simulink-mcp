@@ -8,6 +8,16 @@ import math
 import numpy as np
 from typing import Any, Dict, List 
 import matlab.engine
+import re
+
+
+def cmd_to_regex(cmd: str) -> re.Pattern:
+    """Converts a MATLAB command to a regex pattern."""
+    if cmd == "!": # This command is only used at the beginning of a line
+        return re.compile(r"^\s*!.*", re.MULTILINE)
+    else:
+        escaped = re.escape(cmd)
+        return re.compile(rf"\b{escaped}\b")
 
 
 def reshape_recursive(flat_list: List[Any], shape: List[int]) -> List[Any]:
@@ -110,29 +120,6 @@ def fetch(eng, var: str):
             last_error = e  
 
     raise RuntimeError(f"Failed to fetch variable '{var}': {last_error}") from last_error
-
-
-def batch_fetch(eng, variables: List[str], convert: bool = False) -> Dict[str, Any]:
-    """Fetches several variables from MATLAB workspace and optionally converts them to Python types."""
-    
-    result = {}
-
-
-
-    for var in variables:
-        try:
-            # Cannot do "if in eng.workspace" since it is not a native Python dict, rather a MATLAB object with some dict-like properties.
-            if eng.exist(var, "var") == 1:
-                if convert:
-                    result[var] = fetch(eng, var)
-                else:
-                    result[var] = eng.evalc(f"{var}", nargout=1)
-            else:
-                result[var] = "Variable not found in MATLAB workspace."
-            return result
-        
-        except Exception as e:
-            return RuntimeError(f"Error fetching variable '{var}': {e}")
 
 
             

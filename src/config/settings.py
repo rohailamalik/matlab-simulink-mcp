@@ -4,14 +4,16 @@ from pathlib import Path
 
 
 class Settings(BaseSettings):
-    mode: str 
-    logs_path: Path
-    matlab_helpers_path: Path
-    security_wrappers_path: Path
-    sl_lib_data_path: Path
+    mode: str = "DEV"
+    logs_path: Path = "logs"
+    matlab_helpers_path: Path = "data/helpers"
+    security_wrappers_path: Path = "data/security/wrappers"
+    simlib_database_path: Path = "data/simlib_db.json"
+    blacklist_commands_path: Path = "data/blacklist.txt"
+    sandbox: bool = False
+
     openai_api_key: str = None
     tavily_api_key: str = None
-    advanced_security: bool = False
 
     model_config = SettingsConfigDict(env_file=get_path(".env"))
 
