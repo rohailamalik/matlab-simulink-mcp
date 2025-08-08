@@ -3,18 +3,19 @@ import sys
 from difflib import get_close_matches
 from core.state import get_state 
 from utils.converters import fetch
-from utils.checks import check_file_name, check_code
-from utils.utils import get_cwd
+from utils.checks import check_file, check_code
+from utils.utils import get_cwd, err, res
 from langchain_core.tools import tool, BaseTool
+from pathlib import Path
 
 
 
-def open_simulink_file(file_name: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
+def open_simulink_file(file: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
     """
     Opens a Simulink file and/or returns its content.
 
     Arguments:
-        file_name: Relative path to Simulink file, with .slx extension. 
+        file: Path to .slx file (relative to working directory) 
         get_content: Whether to return textual representation of content in the Simulink file. True by default.
         open_in_desktop: Whether to open the file in desktop. False by default.
 
@@ -22,138 +23,132 @@ def open_simulink_file(file_name: str, get_content: bool = True, open_in_desktop
         If asked, description of the content inside the Simulink file as a dictionary.
     """
 
-    path = check_file_name(file_name = file_name, extension = ".slx", mode = "read", overwrite = False) 
-    
     eng = get_state().eng
+    if (issues:= check_file(eng, file, ".slx", "read", False)):
+        return issues
+    
+    content = None
 
     if open_in_desktop:
         try:
-            if eng.usejava("desktop"):
-                eng.open_system(file_name, nargout=0)
-            else:
-                raise RuntimeError("MATLAB desktop is not running")
-        except Exception as e:
-            raise RuntimeError(f"Unexpected error while opening in desktop: {e}")
+            eng.open_system(file, nargout=0)
+            content = f"{file} opened successfully in MATLAB desktop."
+        except Exception:
+            return err("Unexpected error while opening in desktop.")
     else: 
-        eng.load_system(file_name)
-
-    if get_content:
+        eng.load_system(file)
+    
+    if get_content:  
         try:
-            content = eng.describe_system(file_name) 
-            return content
-        except Exception as e:
-            raise RuntimeError(f"Unexpected error while reading file: {e}")
-    else:
-        return {"status": f"{file_name} opened successfully in MATLAB desktop."}
+            content = eng.describe_system(file) 
+        except Exception:
+            return err("Unexpected error while reading file.")
+        
+    return res(content)
 
 
 
-def open_matlab_file(file_name: str, get_content: bool = True, open_in_desktop: bool = False) -> str:
+def open_matlab_file(file: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
     """
     Returns the content of a matlab script and/or opens it in MATLAB desktop.
 
     Arguments:
-        file_name: Relative path to MATLAB script, with .m extension. 
+        file: Path to .m file (relative to working directory) 
         get_content: Whether to return code inside the script. True by default.
         open_in_desktop: Whether to open the script in MATLAB desktop. False by default.
 
     Returns:
         If asked, code inside the script as a string.
     """
-
-    path = check_file_name(file_name = file_name, extension = ".m", mode = "read", overwrite = False) 
     
     eng = get_state().eng
+    if (issues:= check_file(eng, file, ".m", "read", False)):
+        return issues
     
     if open_in_desktop:
         try:
-            if eng.usejava("desktop"):
-                eng.edit(file_name, nargout=0)
-            else:
-                raise RuntimeError("Failed to open in desktop. MATLAB desktop is not running")
-        except Exception as e:
-            raise RuntimeError(f"Unexpected error while opening in desktop: {e}")
+            eng.edit(file, nargout=0)
+            content = f"{file} opened successfully in MATLAB desktop."
+        except Exception:
+            return err(f"Unexpected error while opening in desktop.")
 
     if get_content: 
         try:
-            return eng.fileread(file_name, nargout=1) 
-        except Exception as e:
-            raise RuntimeError(f"Unexpected error while reading MATLAB file: {e}") 
-    else:
-        return f"{file_name} opened successfully in MATLAB desktop."
+            content = eng.fileread(file, nargout=1) 
+        except Exception:
+            return err(f"Unexpected error while reading MATLAB file.") 
+        
+    return res(content)
 
 
 
-def save_matlab_code(code: str, file_name: str, overwrite: bool = False) -> str:
+def save_matlab_code(code: str, file: str, overwrite: bool = False) -> dict:
     """
     Validates and saves MATLAB code to a .m file in the current MATLAB working directory.
 
     Arguments:
         code: MATLAB code as a string
-        file_name: Script name with .m extension. Use relative paths if needed. If a folder in the path does not exist, it will automatically be created.
+        file: Script name with .m extension. Use relative paths if needed. If a folder in the path does not exist, it will automatically be created.
         overwrite: Whether to overwrite if the file already exists. False by default
 
     Returns:
         Confirmation message with validation errors if any.
     """
 
-    path = check_file_name(file_name = file_name, extension = ".slx", mode = "read", overwrite = False) 
-
     eng = get_state().eng
+    if (issues:= check_file(eng, file, ".m", "write", overwrite)):
+        return issues
+    if (issues:= check_code(code)):
+        return issues
 
     try:
-        path.parent.mkdir(parents=True, exist_ok=True) # Create parent folders in case they don't exist.
+        path = get_cwd(eng) / Path(file)
+        path.parent.mkdir(parents=True, exist_ok=True) 
         with path.open("w") as f:
             f.write(code)
-    except Exception as e:
-        raise RuntimeError(f"Error saving the code file {file_name} in current working directory: {e}")
+    except Exception:
+        return err(f"Error saving the code.")
     
     try: 
-        issues = eng.validate_code(path)
-    except Exception as e:
-        raise RuntimeError(f"Error validating the code file {file_name}: {e}") 
+        issues = eng.validate_code(file)
+    except Exception:
+        return err(f"Error validating the code.") 
     
     if issues:
-        path.unlink()
-        return f"{file_name} not saved as it failed validation with following errors:\n" + "\n".join(issues)
-    
+        return err(f"Code saved but failed validation with errors:\n" + "\n".join(issues))
     else:
-        return f"Code validated and saved successfully as {file_name}."
+        return res(f"Code validated and saved successfully.")
 
 
 
-def run_matlab_code(code: str) -> str:
+def run_matlab_code(code: str) -> dict:
     """
-    Executes MATLAB code, and returns whatever is displayed in the MATLAB command window, wrapped in a string.
+    Executes MATLAB code, and returns MATLAB command window results as a string.
 
     Parameters:
         code: MATLAB code to run.
 
     Returns:
-        The results printed to MATLAB command window, wrapped in a string.
+        The results printed to MATLAB command window.
     """
 
     eng = get_state().eng
-    path = get_cwd(eng) / "canvas.m"   
-
-    try:
-        issues = check_code(code)
-        if issues:
-            raise PermissionError(issues)
-    except Exception as e:
-        raise RuntimeError(f"Failed to check code for security: {e}")
+    if (issues:= check_code(code)):
+        return issues
 
     try:
         # eval does not support multi-line code, so we write it to the canvas (i.e. a temporary file) and run it through evalc.
         # evalc also returns whatever is printed to command window as a string, so it helps with disp functions etc.
         # TODO: Later it will be replaced by a canvas-based editor.
+        path = get_cwd(eng) / "canvas.m" 
         with path.open("w") as f:
             f.write(code)
+        
+        results = eng.evalc("run('{path}')", nargout = 1)
+        return res(results)
 
-        return eng.evalc("run('{file_path}')", nargout = 1)
-
-    except Exception as e:
-        raise RuntimeError(f"MATLAB execution failed: {e}")
+    except Exception:
+        return err(f"Unexpected error while running MATLAB code.")
 
 
 
@@ -166,13 +161,12 @@ def get_variables(variables: list[str], convert = False) -> dict:
         convert: Whether to convert the variables to Python types. When False, the values will be returned as string-wrapped MATLAB types. False by default.
 
     Returns:
-        A dictionary of variables and their values.
+        Variables and their values.
     """
 
     eng = get_state().eng
 
     result = {}
-
     for var in variables:
         try:
             # Cannot do "if in eng.workspace" since it is not a native Python dict, rather a MATLAB object with some dict-like properties.
@@ -182,28 +176,12 @@ def get_variables(variables: list[str], convert = False) -> dict:
                 else:
                     result[var] = eng.evalc(f"{var}", nargout=1)
             else:
-                result[var] = "Variable not found in MATLAB workspace."
+                result[var] = "Not in workspace"
         
-        except Exception as e:
-            raise RuntimeError(f"Error fetching variable '{var}': {e}")
+        except Exception:
+            return err(f"Error fetching variable '{var}'.")
         
-    return result
-    
-
-
-def get_workspace_summary() -> str:
-    """
-    Returns a summary of current MATLAB workspace: variable names, sizes, and types.
-    """
-
-    eng = get_state().eng
-
-    try:
-        info = eng.workspace_summary(nargout=1)
-    except Exception as e:
-        raise RuntimeError(f"Failed to get workspace summary: {e}")
-
-    return info
+    return res(result)
 
 
 
@@ -226,10 +204,11 @@ def search_library(query) -> dict:
     try:
         block_names = list(simlib.keys())
         matches = get_close_matches(query, block_names, n=n, cutoff=cutoff)
-        return {name: simlib[name]['paths'] for name in matches}
+        results = {name: simlib[name]['paths'] for name in matches}
+        return res(results)
     
     except Exception as e:
-       raise RuntimeError(f"Error searching Simulink library: {e}")
+       return err(f"Error searching Simulink library.")
 
 
 # Collect all the tools 

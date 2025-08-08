@@ -29,22 +29,18 @@ def start_server():
     get_state().validate()
 
 
-
+# maybe switch to logger.debug instead of raise (+ sys exit)
 
 # TODO: Incorporate a check engine function and run it on a separate thread on loop
 # TODO: Making the startup a bit more robust. 
-# TODO: Work on the logger
 # TODO: TEST TEST TEST
 # TODO: exe compilation
     
 # TODO: In tools, introduce a fallback where the saving/writing/running directory is changed from working directory to temp
-# TODO: Simulink opening tool maybe
-
-# TODO: CWD fetching with each tool call instead of from state.
 
 
-# TODO: Ban builtin and some other sutff
-# TODO: Ban unwrappable functions 
+
+
 
 
 # Strategy: 
@@ -76,9 +72,3 @@ def start_server():
 # so in wrapper of str2func we put a check for builtin. if it is called we block it. there is also a string check in main code text too. 
 
 
-
-# TODO. IMPLEMENT MODES. HIGH SAFETY LOW SAFTEY WHICH ARE STORED IN STATE. HIGH SAFETY HAS ALL WRAPPER STUFF LOW SAFTEY IS ONLY STRING CHECKS
-
-
-
-# what is left is to update wrapers

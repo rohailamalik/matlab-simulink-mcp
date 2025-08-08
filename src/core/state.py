@@ -28,9 +28,9 @@ class ServerState:
         set_helpers(self.eng)
 
 
-state = ServerState()
+_state = ServerState()
 
 def get_state() -> ServerState:
-    return state
+    return _state
 
 
