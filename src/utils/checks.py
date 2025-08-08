@@ -1,38 +1,38 @@
 import re
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 from core.state import get_state
-from utils.utils import get_cwd
+from utils.utils import err
 
 
-def check_file_name(file_name: str, extension: str, mode: Literal["read", "write"], overwrite: bool) -> Path:
-    
-    path = Path(file_name)
+def check_file(eng, file: str, ext: str, mode: Literal["read", "write"], overwrite: bool) -> Optional[dict]:
 
-    if (path.is_absolute() or any(part == ".." for part in path.parts)):
-        raise PermissionError("Access to absolute or parent paths is forbidden. Only files on MATLAB path are usable.")
+    p = Path(file)
 
-    if path.suffix != extension:
-        raise ValueError(f"Only {extension} files are supported.")
+    if p.is_absolute() or any(part == ".." for part in p.parts):
+        return err("Access to absolute or parent paths is forbidden. Only files on MATLAB path are usable.", security = True)
 
-    eng = get_state().eng
-    cwd = get_cwd(eng)
+    if p.suffix != ext:
+        return err(f"Only {ext} files are supported.", log = False)
 
-    path = cwd / path
-    
+    try:
+        exists = eng.exist(file, nargout=1)
+    except Exception:
+        return err("Error checking if the file already exists.")
+
     if mode == "write":
-        if not path.stem.isidentifier():
-            raise ValueError("File name must be a valid MATLAB identifier.")
-        if not overwrite and path.is_file():
-            raise RuntimeError(f"'{path}' already exists in MATLAB's current working directory.")
-    elif mode == "read":
-        if not path.is_file():
-            raise FileNotFoundError(f"'{path}' not found in MATLAB's current working directory: {cwd}")
-    
-    return path
+        if not p.stem.isidentifier():
+            return err("File name must be a valid MATLAB identifier.", log = False)
+        if not overwrite and exists == 2:
+            return err(f"'{file}' already exists in MATLAB's current working directory or on the MATLAB path.", log = False)
+    else:  # mode == "read"
+        if exists == 0:
+            return err(f"'{file}' not found in MATLAB's current working directory or on the MATLAB path.", log = False)
+
+    return None
 
 
-def check_commands(code: str) -> None:
+def check_commands(code: str) -> Optional[dict]:
     """Checks a given code string for forbidden commands and raises error if any found."""
     clean_code = code.lower()
 
@@ -40,12 +40,12 @@ def check_commands(code: str) -> None:
 
     for flag in blacklist:
         if re.search(flag, clean_code):
-            raise PermissionError(f"Use of {re.sub(r'^\\b|\\b$', '', flag).replace(r'\.', '.')} command is not allowed")
+            return err(f"Use of {re.sub(r'^\\b|\\b$', '', flag).replace(r'\.', '.')} command is not allowed.", security = True)
         
     return None
 
 
-def check_paths(code: str) -> None:
+def check_paths(code: str) -> Optional[dict]:
     """Checks string literals in code for forbidden path usage and raises error if found."""
     
     literals = re.findall(r"(?:'[^']*'|\"[^\"]*\")", code)
@@ -58,16 +58,16 @@ def check_paths(code: str) -> None:
         path = Path(path_str)
 
         if path.is_absolute():
-            raise PermissionError("Absolute paths are not allowed. Only files on MATLAB path are accessible.")
+            return err("Absolute paths are not allowed. Only files on MATLAB path are accessible.", security = True)
 
         if ".." in path.parts:
-            raise PermissionError("Paths with .. are not allowed. Only files on MATLAB path are accessible.")
+            return err("Paths with .. are not allowed. Only files on MATLAB path are accessible.", security = True)
 
         if "*" in path_str or "?" in path_str:
-            raise PermissionError("Paths with * or ? are not allowed.")
+            return err("Paths with * or ? are not allowed.", security = True)
 
     return None
 
 
-def check_code(code: str) -> None:
+def check_code(code: str) -> Optional[dict]:
     return check_commands(code) or check_paths(code)

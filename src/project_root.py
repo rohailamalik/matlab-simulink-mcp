@@ -1,6 +1,7 @@
 # This file is for setting up the project root path
 # It is used to resolve relative paths in the project
 # It should always be placed at the root of the project directory
+# Do not delete
 
 import sys
 from pathlib import Path
