@@ -9,18 +9,18 @@ from langchain_core.tools import tool, BaseTool
 from pathlib import Path
 
 
-
+@tool
 def open_simulink_file(file: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
     """
     Opens a Simulink file and/or returns its content.
 
     Arguments:
         file: Path to .slx file (relative to working directory) 
-        get_content: Whether to return textual representation of content in the Simulink file. True by default.
-        open_in_desktop: Whether to open the file in desktop. False by default.
+        get_content: Whether to return description of content in the Simulink file. 
+        open_in_desktop: Whether to open the file in desktop.
 
     Returns:
-        If asked, description of the content inside the Simulink file as a dictionary.
+        A dictionary of tool execution status and Simulink file content.
     """
 
     eng = get_state().eng
@@ -47,18 +47,18 @@ def open_simulink_file(file: str, get_content: bool = True, open_in_desktop: boo
     return res(content)
 
 
-
+@tool
 def open_matlab_file(file: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
     """
     Returns the content of a matlab script and/or opens it in MATLAB desktop.
 
     Arguments:
         file: Path to .m file (relative to working directory) 
-        get_content: Whether to return code inside the script. True by default.
-        open_in_desktop: Whether to open the script in MATLAB desktop. False by default.
+        get_content: Whether to return code in the script. 
+        open_in_desktop: Whether to open the script in MATLAB desktop. 
 
     Returns:
-        If asked, code inside the script as a string.
+        A dictionary of tool execution status and file code.
     """
     
     eng = get_state().eng
@@ -81,18 +81,18 @@ def open_matlab_file(file: str, get_content: bool = True, open_in_desktop: bool 
     return res(content)
 
 
-
+@tool
 def save_matlab_code(code: str, file: str, overwrite: bool = False) -> dict:
     """
     Validates and saves MATLAB code to a .m file in the current MATLAB working directory.
 
     Arguments:
         code: MATLAB code as a string
-        file: Script name with .m extension. Use relative paths if needed. If a folder in the path does not exist, it will automatically be created.
-        overwrite: Whether to overwrite if the file already exists. False by default
+        file: Path to script file (relative to current working directory) with .m extension.
+        overwrite: Whether to overwrite if the file already exists.
 
     Returns:
-        Confirmation message with validation errors if any.
+        A dictionary of tool execution status.
     """
 
     eng = get_state().eng
@@ -120,16 +120,16 @@ def save_matlab_code(code: str, file: str, overwrite: bool = False) -> dict:
         return res(f"Code validated and saved successfully.")
 
 
-
+@tool
 def run_matlab_code(code: str) -> dict:
     """
-    Executes MATLAB code, and returns MATLAB command window results as a string.
+    Executes code in MATLAB windows, and returns command window results as a string.
 
     Parameters:
         code: MATLAB code to run.
 
     Returns:
-        The results printed to MATLAB command window.
+        A dictionary of tool execution status and results printed to command window.
     """
 
     eng = get_state().eng
@@ -144,24 +144,24 @@ def run_matlab_code(code: str) -> dict:
         with path.open("w") as f:
             f.write(code)
         
-        results = eng.evalc("run('{path}')", nargout = 1)
+        results = eng.evalc("run('canvas.m')", nargout = 1)
         return res(results)
 
     except Exception:
         return err(f"Unexpected error while running MATLAB code.")
 
 
-
+@tool
 def get_variables(variables: list[str], convert = False) -> dict:
     """
     Fetches specified variables from MATLAB workspace.
 
     Parameters:
         variables: List of variable names to retrieve from workspace.
-        convert: Whether to convert the variables to Python types. When False, the values will be returned as string-wrapped MATLAB types. False by default.
+        convert: Whether to convert the variables to Python types. When False, the values will be returned as string-wrapped MATLAB types.
 
     Returns:
-        Variables and their values.
+        A dictionary of tool execution status, variables and their values.
     """
 
     eng = get_state().eng
@@ -170,21 +170,22 @@ def get_variables(variables: list[str], convert = False) -> dict:
     for var in variables:
         try:
             # Cannot do "if in eng.workspace" since it is not a native Python dict, rather a MATLAB object with some dict-like properties.
-            if eng.exist(var, "var") == 1: # This automatically ensures that the var is a proper variable name, without any code injection which could execute through evalc
+            # eng.exist automatically ensures that the var is a proper variable name, without any code injection which could execute through evalc
+            if eng.exist(var, "var") == 1: 
                 if convert:
                     result[var] = fetch(eng, var)
                 else:
                     result[var] = eng.evalc(f"{var}", nargout=1)
             else:
                 result[var] = "Not in workspace"
-        
+
         except Exception:
-            return err(f"Error fetching variable '{var}'.")
+            return err(f"Error getting variable '{var}'.")
         
     return res(result)
 
 
-
+@tool
 def search_library(query) -> dict:
     """
     Searches for a block name in the Simulink block library and returns all matching source paths.
@@ -193,7 +194,7 @@ def search_library(query) -> dict:
         query: Name of the block to search for.
 
     Returns:
-        A list of paths of blocks with similar names.
+        A dictionary of tool execution status, a paths of blocks with similar names.
     """
 
     simlib = get_state().simlib
@@ -220,5 +221,7 @@ tools = [
     if isinstance(obj, BaseTool)
 ]
 
-# TODO remember the newline thing for \n bs
+# TODO remember the newline thing for \n 
 # ['VehicleWithFourSpeedTransmission/Inertia', newline, 'Impeller']
+
+# SimuGen is more specific, we want our tools to be more generelizable and wrappeable partially at least as an mcp server

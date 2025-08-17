@@ -1,11 +1,6 @@
 from pathlib import Path
-from project_root import root_path
 from typing import Any
 from utils.logger import logger
-
-
-def get_path(relative_path: str) -> Path:
-    return root_path / relative_path
 
 
 def get_cwd(eng) -> Path:

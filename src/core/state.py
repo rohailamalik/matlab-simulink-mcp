@@ -1,17 +1,17 @@
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 from typing import Optional, List
 import matlab.engine
 import re
-from core.startup import load_blacklist, load_simlib_data, set_helpers, set_sandbox, connect_session
+from core.startup import load_blacklist, load_simlib_data, set_helpers, connect_session
+from utils.logger import logger
 
 @dataclass
 class ServerState:
-    """Global state for a MATLAB MCP session."""
+    """Global state for session."""
     session: Optional[str] = None
     eng: Optional[matlab.engine.MatlabEngine] = None
     simlib: Optional[dict] = None
     blacklist: Optional[List[re.Pattern]] = None
-    sandbox: bool = False # will be removed. too volatile
 
     def validate(self):
         """Ensures all attributes are set."""
@@ -26,7 +26,7 @@ class ServerState:
         self.simlib = load_simlib_data()
         self.blacklist = load_blacklist()
         set_helpers(self.eng)
-
+    
 
 _state = ServerState()
 
