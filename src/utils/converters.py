@@ -4,11 +4,11 @@
 # This is different from json/string based conversion which returns values as strings. useful for viewing data in a human-readable format, such as by the llm. 
 # So we will use that one, and this could be perhaps useful elsewhere.
 
+import re
 import math
 import numpy as np
-from typing import Any, Dict, List 
+from typing import Any, List 
 import matlab.engine
-import re
 
 
 def cmd_to_regex(cmd: str) -> re.Pattern:
@@ -35,7 +35,7 @@ def reshape_recursive(flat_list: List[Any], shape: List[int]) -> List[Any]:
     return _reshape(flat_list, shape)
 
 
-def convert_supported(data: Any):
+def convert_supported(data: Any) -> List[Any]:
 
     # Automatically converted by MATLAB to native Python types
     if isinstance(data, (int, float, bool, str, dict, type(None))):
@@ -54,7 +54,7 @@ def convert_supported(data: Any):
         return np_array.tolist()
 
 
-def flatten_struct_array(array_name: str, eng):
+def flatten_struct_array(array_name: str, eng) -> List[Any]:
     "Converts a MATLAB struct array to a flattened list of dictionaries."
 
     # Even 1D Struct arrays cannot be fetched so we need to save the flattened array to workspace as a temporary variable.
@@ -70,7 +70,7 @@ def flatten_struct_array(array_name: str, eng):
     return converted_array
 
 
-def convert_non_supported(array_name: str, eng):
+def convert_non_supported(array_name: str, eng) -> List[Any]:
     """
     Converts MATLAB data types such as nD cell, string, char and struct arrays.
     These are not automatically converted by MATLAB to native Python types and so can't even be fetched from the workspace.
@@ -99,7 +99,7 @@ def convert_non_supported(array_name: str, eng):
     return reshape_recursive(flat_array, shape)
 
 
-def fetch(eng, var: str):
+def fetch(eng, var: str) -> Any:
     """
     Attempts to fetch a variable from MATLAB in decreasing order of compatibility:
     1. Direct fetch + supported conversion
@@ -110,16 +110,11 @@ def fetch(eng, var: str):
     try_func = [
         lambda: convert_supported(eng.workspace[var]),
         lambda: convert_non_supported(var, eng),
-        lambda: eng.eval(f"jsonencode({var}, 'PrettyPrint', true)")
+        lambda: eng.jsonencode(var, 'PrettyPrint', True, nargout=1)
     ]
 
     for i, attempt in enumerate(try_func, 1):
-        try:
-            return attempt()
-        except Exception as e:
-            last_error = e  
-
-    raise RuntimeError(f"Failed to fetch variable '{var}': {last_error}") from last_error
+        return attempt()
 
 
             

@@ -37,6 +37,9 @@ def start_server():
 # TODO: exe compilation
     
 # TODO: In tools, introduce a fallback where the saving/writing/running directory is changed from working directory to temp
+# TODO: Incorporate image reading and multi modality 
+# for graph reading etc it's just an addon, not necessary since the llm can just parse through arrays plotting the graph
+# though it is not much optimal at large lengths etc
 
 
 

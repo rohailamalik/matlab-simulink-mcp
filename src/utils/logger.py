@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
-from utils.utils import get_path
-from config.settings import settings  
+from config.settings import settings 
+from pathmgr import get_path 
 
 def setup_logger(name: str = "app"):
     logger = logging.getLogger(name)
@@ -26,5 +26,4 @@ def setup_logger(name: str = "app"):
 
     return logger
 
-
-logger = setup_logger("MMCP")
+logger = setup_logger("MATLAB_MCP")

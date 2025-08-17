@@ -25,7 +25,7 @@ def check_file(eng, file: str, ext: str, mode: Literal["read", "write"], overwri
             return err("File name must be a valid MATLAB identifier.", log = False)
         if not overwrite and exists == 2:
             return err(f"'{file}' already exists in MATLAB's current working directory or on the MATLAB path.", log = False)
-    else:  # mode == "read"
+    else: 
         if exists == 0:
             return err(f"'{file}' not found in MATLAB's current working directory or on the MATLAB path.", log = False)
 
