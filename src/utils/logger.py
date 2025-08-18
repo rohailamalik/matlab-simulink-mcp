@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from config.settings import settings 
-from pathmgr import get_path 
+from pathfinder import get_path 
 
 def setup_logger(name: str = "app"):
     logger = logging.getLogger(name)
@@ -10,7 +10,7 @@ def setup_logger(name: str = "app"):
     if logger.handlers:
         return logger
 
-    log = get_path(settings.logs_path) / "log"
+    log = get_path(settings.logs_path) / "matlab_mcp.log"
     fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
 
     fh = RotatingFileHandler(log, maxBytes=1_000_000, backupCount=3)

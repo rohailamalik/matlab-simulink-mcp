@@ -2,18 +2,47 @@ import re
 import json
 import matlab.engine
 from typing import List
-from config.settings import settings
+from pathlib import Optional, Path # Optional is used in state.py through import *
 from utils.logger import logger
 from utils.converters import cmd_to_regex
-from pathmgr import get_path
+from pathfinder import get_path
 
 
 def search_sessions() -> list:
     """Searches and returns a list of shared MATLAB sessions."""
     try:
+        logger.info("Searching for shared MATLAB sessions...")
         return matlab.engine.find_matlab()
     except Exception as e:
         raise RuntimeError(f"Error searching for MATLAB sessions: {e}")
+    
+
+def select_session():
+    """Select a MATLAB session from available shared sessions."""
+    while True:
+        sessions = search_sessions() or []
+        if not sessions:
+            logger.info(
+                "No shared sessions found. "
+                "Run `matlab.engine.shareEngine` in MATLAB to share a session."
+            )
+            input("Press Enter to retry...")
+            continue
+
+        if len(sessions) == 1:
+            return sessions[0]
+
+        logger.info("Multiple shared sessions found:")
+        for i, s in enumerate(sessions, 1):
+            logger.info(f"  {i}. {s}")
+
+        while True:
+            choice = input("Select a session by typing its index: ").strip()
+            if choice.isdigit():
+                idx = int(choice)
+                if 1 <= idx <= len(sessions):
+                    return sessions[idx - 1]
+            logger.info("Invalid choice. Please enter a valid number.")
 
 
 def connect_session(session: str):
@@ -28,14 +57,11 @@ def connect_session(session: str):
         raise RuntimeError(f"Unexpected error during MATLAB connection: {e}")
     
 
-def load_simlib_data() -> dict:
+def load_simlib(path: Path) -> dict:
     """Loads the dictionary based data for Simulink model library"""
-
-    path = settings.simlib_database_path
     
     if not path:
         raise ValueError("Simulink Library data file path not configured.")
-    
     path = get_path(path)
 
     try:
@@ -51,10 +77,11 @@ def load_simlib_data() -> dict:
         raise RuntimeError(f"Unexpected error while loading server Simulink Library data: {e}")
     
 
-def load_blacklist() -> List[re.Pattern]:
+def load_blacklist(path: Path) -> List[re.Pattern]:
     """Loads blacklisted commands from a text file, ignoring comments and empty lines."""
 
-    path = settings.blacklist_commands_path
+    if not path:
+        raise ValueError("Blacklist file path not configured.")
     path = get_path(path)
 
     try:
@@ -76,14 +103,12 @@ def load_blacklist() -> List[re.Pattern]:
         raise RuntimeError(f"Unexpected error while loading blacklisted commands: {e}")
         
 
-def set_helpers(eng):
+def set_helpers(path: Path, eng):
     """Add MATLAB helper functions used in the tools to the MATLAB path"""
 
-    path = settings.matlab_helpers_path
-    path = get_path(path)
-
     if not path:
-        raise ValueError("MATLAB helpers path not configured.")
+        raise ValueError("Helper functions path not configured.")
+    path = get_path(path)
 
     if not path.is_dir():
         raise FileNotFoundError(f"MATLAB helpers directory not found: {path}")
@@ -91,6 +116,7 @@ def set_helpers(eng):
     try:
         eng.addpath(str(path), nargout=0)
         logger.info(f"Helpers path set to {path}")
+        return path
     except Exception as e:
         raise RuntimeError("Failed to add MATLAB helper path: {e}")
 
