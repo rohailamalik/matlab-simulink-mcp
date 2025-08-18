@@ -7,9 +7,13 @@ from utils.checks import check_file, check_code
 from utils.utils import get_cwd, err, res
 from langchain_core.tools import tool, BaseTool
 from pathlib import Path
+import matlab.engine
 
+# TODO: introduce a fallback where the saving/writing/running directory is changed from working directory to temp
+# TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
+# for graph reading etc it's just an addon, not necessary since the llm can just parse through arrays plotting the graph
+# though it is not much optimal at large lengths etc
 
-@tool
 def open_simulink_file(file: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
     """
     Opens a Simulink file and/or returns its content.
@@ -47,7 +51,6 @@ def open_simulink_file(file: str, get_content: bool = True, open_in_desktop: boo
     return res(content)
 
 
-@tool
 def open_matlab_file(file: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
     """
     Returns the content of a matlab script and/or opens it in MATLAB desktop.
@@ -81,7 +84,6 @@ def open_matlab_file(file: str, get_content: bool = True, open_in_desktop: bool 
     return res(content)
 
 
-@tool
 def save_matlab_code(code: str, file: str, overwrite: bool = False) -> dict:
     """
     Validates and saves MATLAB code to a .m file in the current MATLAB working directory.
@@ -120,7 +122,6 @@ def save_matlab_code(code: str, file: str, overwrite: bool = False) -> dict:
         return res(f"Code validated and saved successfully.")
 
 
-@tool
 def run_matlab_code(code: str) -> dict:
     """
     Executes code in MATLAB windows, and returns command window results as a string.
@@ -146,12 +147,15 @@ def run_matlab_code(code: str) -> dict:
         
         results = eng.evalc("run('canvas.m')", nargout = 1)
         return res(results)
+    
+    except matlab.engine.MatlabExecutionError as e:
+        error_msg = str(e).strip().splitlines()[-1]
+        return err(f"MATLAB returned error: {error_msg}")
 
     except Exception:
         return err(f"Unexpected error while running MATLAB code.")
 
 
-@tool
 def get_variables(variables: list[str], convert = False) -> dict:
     """
     Fetches specified variables from MATLAB workspace.
@@ -185,7 +189,6 @@ def get_variables(variables: list[str], convert = False) -> dict:
     return res(result)
 
 
-@tool
 def search_library(query) -> dict:
     """
     Searches for a block name in the Simulink block library and returns all matching source paths.
@@ -210,18 +213,15 @@ def search_library(query) -> dict:
     
     except Exception as e:
        return err(f"Error searching Simulink library.")
-
-
-# Collect all the tools 
-_current_module = sys.modules[__name__]
-
-tools = [
-    obj
-    for name, obj in inspect.getmembers(_current_module)
-    if isinstance(obj, BaseTool)
-]
-
+    
 # TODO remember the newline thing for \n 
 # ['VehicleWithFourSpeedTransmission/Inertia', newline, 'Impeller']
 
-# SimuGen is more specific, we want our tools to be more generelizable and wrappeable partially at least as an mcp server
+
+# Get all the tools 
+_current_module = sys.modules[__name__]
+tools = [
+    tool(obj)
+    for name, obj in inspect.getmembers(_current_module, inspect.isfunction)
+    if not isinstance(obj, BaseTool) and not name.startswith("_")
+]

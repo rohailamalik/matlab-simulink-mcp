@@ -1,11 +1,8 @@
-from core.server import start_server
-from pathlib import Path
-from pathmgr import get_path
-import matlab.engine
-from core.tools import open_matlab_file, open_simulink_file, save_matlab_code, run_matlab_code, get_variables, search_library
+from core.state import init_state
+from core.tools import *
 
 
-start_server()
+init_state()
 
 #file_name = "brain.m"
 

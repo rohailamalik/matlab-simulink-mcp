@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pathmgr import get_path
+from pathfinder import get_path
 from pathlib import Path
 
 
@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     mode: str = "DEV"
     logs_path: Path = "logs"
     matlab_helpers_path: Path = "data/helpers"
-    security_wrappers_path: Path = "data/security/wrappers"
     simlib_database_path: Path = "data/simlib_db.json"
     blacklist_commands_path: Path = "data/blacklist.txt"
 

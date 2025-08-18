@@ -1,3 +1,5 @@
+'''
+
 from core.startup import search_sessions
 from core.state import get_state
 from utils.logger import logger
@@ -28,7 +30,13 @@ def start_server():
     logger.info(f"Connected to MATLAB session: {session}")
     get_state().validate()
 
+'''
 
+
+# TODO remember the newline thing for \n 
+# ['VehicleWithFourSpeedTransmission/Inertia', newline, 'Impeller']
+
+# SimuGen is more specific, we want our tools to be more generelizable and wrappeable partially at least as an mcp server
 # maybe switch to logger.debug instead of raise (+ sys exit)
 
 # TODO: Incorporate a check engine function and run it on a separate thread on loop
@@ -37,7 +45,7 @@ def start_server():
 # TODO: exe compilation
     
 # TODO: In tools, introduce a fallback where the saving/writing/running directory is changed from working directory to temp
-# TODO: Incorporate image reading and multi modality 
+# TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
 # for graph reading etc it's just an addon, not necessary since the llm can just parse through arrays plotting the graph
 # though it is not much optimal at large lengths etc
 
