@@ -13,6 +13,11 @@ function system_data = describe_system(system_path)
     for i = 1:length(blocks)
 
         blk = blocks{i};
+
+        if strcmp(blk, system_path) % Skips the subsystem itself if it is being asked for
+            continue;
+        end 
+
         blk_source = get_param(blk, 'ReferenceBlock');
 
         element = struct();
@@ -23,7 +28,7 @@ function system_data = describe_system(system_path)
             element.Source = blk_source;
         end 
 
-        if ~strcmp(element.Type, "SimscapeBlock") && ~strcmp(element.Type, "SubSystem")
+        if ~strcmp(element.Type, "SimscapeBlock") && ~strcmp(element.Type, "SubSystem") && ~contains("Port", "port", 'IgnoreCase', true)
             % It's a built-in simulink block
             if blk_source ~= ""
                 element.Source = ['built-in/' element.Type];
@@ -47,7 +52,7 @@ function system_data = describe_system(system_path)
     system.Elements = elements;
     system.Connections = connections; 
 
-    system_data = jsonencode(system);
-    %system_data = system;
+    %system_data = jsonencode(system);
+    system_data = system;
 
 end
