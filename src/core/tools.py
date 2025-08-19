@@ -8,99 +8,84 @@ from utils.utils import get_cwd, err, res
 from langchain_core.tools import tool, BaseTool
 from pathlib import Path
 import matlab.engine
+import tempfile
 
-# TODO: introduce a fallback where the saving/writing/running directory is changed from working directory to temp
 # TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
 # for graph reading etc it's just an addon, not necessary since the llm can just parse through arrays plotting the graph
 # though it is not much optimal at large lengths etc
 
-def open_simulink_file(file: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
+
+@tool
+def read_simulink(system: str) -> dict:
     """
-    Opens a Simulink file and/or returns its content.
+    Returns JSON information about the layout of a simulink object containing elements, ports, connections, etc.
 
     Arguments:
-        file: Path to .slx file (relative to working directory) 
-        get_content: Whether to return description of content in the Simulink file. 
-        open_in_desktop: Whether to open the file in desktop.
+        system: Path to the system or subsystem. e.g. system/subsystem1
 
     Returns:
-        A dictionary of tool execution status and Simulink file content.
+        A dictionary of tool execution status and the information about all the elements, their ports, and their connections in the system or subsystem.
     """
 
     eng = get_state().eng
-    if (issues:= check_file(eng, file, ".slx", "read", False)):
-        return issues
+    if (issues:= check_file(eng, system, adv = False)):
+        return issues 
     
-    content = None
+    try:
+        eng.load_system(system)
+        return eng.describe_system(system) 
+    except Exception:
+        return err("Error reading file.")
 
-    if open_in_desktop:
-        try:
-            eng.open_system(file, nargout=0)
-            content = f"{file} opened successfully in MATLAB desktop."
-        except Exception:
-            return err("Unexpected error while opening in desktop.")
-    else: 
-        eng.load_system(file)
-    
-    if get_content:  
-        try:
-            content = eng.describe_system(file) 
-        except Exception:
-            return err("Unexpected error while reading file.")
-        
-    return res(content)
-
-
-def open_matlab_file(file: str, get_content: bool = True, open_in_desktop: bool = False) -> dict:
+  
+@tool
+def read_code(file: str, open: bool = False) -> dict:
     """
-    Returns the content of a matlab script and/or opens it in MATLAB desktop.
+    Returns the code inside a MATLAB script file (or any text file), and optionally opens it in MATLAB window.
 
     Arguments:
-        file: Path to .m file (relative to working directory) 
-        get_content: Whether to return code in the script. 
-        open_in_desktop: Whether to open the script in MATLAB desktop. 
+        script: Path to the .m file, relative to the working directory.
+        open: Whether to open the file in MATLAB desktop. False unless asked.
 
     Returns:
-        A dictionary of tool execution status and file code.
+        A dictionary of tool execution status and code inside the script.
     """
-    
+
     eng = get_state().eng
-    if (issues:= check_file(eng, file, ".m", "read", False)):
+    if (issues:= check_file(eng, file)):
         return issues
     
-    if open_in_desktop:
+    if open:
         try:
             eng.edit(file, nargout=0)
-            content = f"{file} opened successfully in MATLAB desktop."
         except Exception:
             return err(f"Unexpected error while opening in desktop.")
 
-    if get_content: 
-        try:
-            content = eng.fileread(file, nargout=1) 
-        except Exception:
-            return err(f"Unexpected error while reading MATLAB file.") 
+    try:
+        content = eng.fileread(file, nargout=1) 
+    except Exception as e:
+        error_msg = str(e).strip().splitlines()[-1]
+        return err(f"Error reading file: {error_msg}")
         
-    return res(content)
+    return res(content)    
 
 
-def save_matlab_code(code: str, file: str, overwrite: bool = False) -> dict:
+@tool
+def save_code(code: str, file: str, overwrite: bool = False) -> dict:
     """
-    Validates and saves MATLAB code to a .m file in the current MATLAB working directory.
+    Validates and saves MATLAB code to a .m file.
 
     Arguments:
         code: MATLAB code as a string
-        file: Path to script file (relative to current working directory) with .m extension.
-        overwrite: Whether to overwrite if the file already exists.
+        file: Path to file (relative to current working directory) with .m extension.
+        overwrite: Whether to overwrite if the file already exists. False unless asked.
 
     Returns:
         A dictionary of tool execution status.
     """
 
     eng = get_state().eng
-    if (issues:= check_file(eng, file, ".m", "write", overwrite)):
-        return issues
-    if (issues:= check_code(code)):
+    if (issues:= check_file(eng, file, True, overwrite=overwrite)):
         return issues
 
     try:
@@ -122,9 +107,10 @@ def save_matlab_code(code: str, file: str, overwrite: bool = False) -> dict:
         return res(f"Code validated and saved successfully.")
 
 
-def run_matlab_code(code: str) -> dict:
+@tool
+def run_code(code: str) -> dict:
     """
-    Executes code in MATLAB windows, and returns command window results as a string.
+    Executes code in MATLAB, and returns command window results as a string.
 
     Parameters:
         code: MATLAB code to run.
@@ -133,29 +119,35 @@ def run_matlab_code(code: str) -> dict:
         A dictionary of tool execution status and results printed to command window.
     """
 
+    # TODO: Later implement a canvas based editor
     eng = get_state().eng
-    if (issues:= check_code(code)):
+    if (issues := check_code(code)):
         return issues
 
-    try:
-        # eval does not support multi-line code, so we write it to the canvas (i.e. a temporary file) and run it through evalc.
-        # evalc also returns whatever is printed to command window as a string, so it helps with disp functions etc.
-        # TODO: Later it will be replaced by a canvas-based editor.
-        path = get_cwd(eng) / "canvas.m" 
+    def _write_and_run(path: Path) -> str:
         with path.open("w") as f:
             f.write(code)
-        
-        results = eng.evalc("run('canvas.m')", nargout = 1)
+        return eng.evalc(f"run('{path.name}')", nargout=1)
+
+    try: 
+        path = get_cwd(eng) / "canvas.m"
+        results = _write_and_run(path)
         return res(results)
-    
+
+    except PermissionError: # Fallback to temporary file
+        path = Path(tempfile.gettempdir()) / "canvas.m"
+        results = _write_and_run(path)
+        return res(results)
+
     except matlab.engine.MatlabExecutionError as e:
         error_msg = str(e).strip().splitlines()[-1]
         return err(f"MATLAB returned error: {error_msg}")
 
     except Exception:
-        return err(f"Unexpected error while running MATLAB code.")
+        return err("Unexpected error while running MATLAB code.")
 
 
+@tool
 def get_variables(variables: list[str], convert = False) -> dict:
     """
     Fetches specified variables from MATLAB workspace.
@@ -189,6 +181,7 @@ def get_variables(variables: list[str], convert = False) -> dict:
     return res(result)
 
 
+@tool
 def search_library(query) -> dict:
     """
     Searches for a block name in the Simulink block library and returns all matching source paths.
@@ -220,8 +213,4 @@ def search_library(query) -> dict:
 
 # Get all the tools 
 _current_module = sys.modules[__name__]
-tools = [
-    tool(obj)
-    for name, obj in inspect.getmembers(_current_module, inspect.isfunction)
-    if not isinstance(obj, BaseTool) and not name.startswith("_")
-]
+tools = [obj for name, obj in inspect.getmembers(_current_module) if isinstance(obj, BaseTool) ]

@@ -14,9 +14,10 @@ Always respond step-by-step.
 The tools provided to you are being tested, so whenever you use a tool, tell the user how you used it, what inputs did you give to it and what exact output did you return, especially in case of multiple tool use or errors.
 If a tool is not working, do not continue attempting to use it more than twice in a row. Instead, return to the user and let them know.
 
+Important:
 You are not allowed to access anything outside current working directory, so no absolute path usage or any messing with MATLAB's current path.
-You are not allowed to delete any file. Do not close any file/model/window unless user asks you to.
+You are not allowed to delete any file. Never close any file/model/window unless user asks you to.
 
 """
 
-SimAgent = create_react_agent(llm, tools = tools, prompt=system_prompt)
+sim_agent = create_react_agent(llm, tools = tools, prompt=system_prompt)

@@ -1,8 +1,8 @@
 import re
 import json
 import matlab.engine
-from typing import List
-from pathlib import Optional, Path # Optional is used in state.py through import *
+from typing import Optional, List # Optional is used in state.py through import *
+from pathlib import Path 
 from utils.logger import logger
 from utils.converters import cmd_to_regex
 from pathfinder import get_path

@@ -1,6 +1,4 @@
-function system_data = describe_system(full_system_path)
-
-system_path = regexprep(full_system_path, '\.slx$', '');
+function system_data = describe_system(system_path)
 
 % This function returns the information about a system layout as a JSON. 
 % It's still problematic with Simscape because some blocks such as
@@ -15,6 +13,11 @@ system_path = regexprep(full_system_path, '\.slx$', '');
     for i = 1:length(blocks)
 
         blk = blocks{i};
+
+        if strcmp(blk, system_path) % Skips the subsystem itself if it is being asked for
+            continue;
+        end 
+
         blk_source = get_param(blk, 'ReferenceBlock');
 
         element = struct();
@@ -25,7 +28,7 @@ system_path = regexprep(full_system_path, '\.slx$', '');
             element.Source = blk_source;
         end 
 
-        if ~strcmp(element.Type, "SimscapeBlock") && ~strcmp(element.Type, "SubSystem")
+        if ~strcmp(element.Type, "SimscapeBlock") && ~strcmp(element.Type, "SubSystem") && ~contains("Port", "port", 'IgnoreCase', true)
             % It's a built-in simulink block
             if blk_source ~= ""
                 element.Source = ['built-in/' element.Type];

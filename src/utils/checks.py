@@ -1,33 +1,33 @@
 import re
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 from core.state import get_state
 from utils.utils import err
+from pathlib import Path
+from typing import Optional
 
 
-def check_file(eng, file: str, ext: str, mode: Literal["read", "write"], overwrite: bool) -> Optional[dict]:
-
+def check_file(eng, file: str, write: bool = False, overwrite: bool = False, adv: bool = True) -> Optional[dict]:
+    """Validate a MATLAB file operation before use."""
     p = Path(file)
 
-    if p.is_absolute() or any(part == ".." for part in p.parts):
-        return err("Access to absolute or parent paths is forbidden. Only files on MATLAB path are usable.", security = True)
+    if p.is_absolute() or ".." in p.parts:
+        return err("Access to absolute or parent paths is forbidden. Only files on MATLAB path are usable.", security=True)
 
-    if p.suffix != ext:
-        return err(f"Only {ext} files are supported.", log = False)
+    if adv:
+        try:
+            exists = eng.exist(file, nargout=1)
+        except Exception:
+            return err("Error checking if the file exists.")
 
-    try:
-        exists = eng.exist(file, nargout=1)
-    except Exception:
-        return err("Error checking if the file already exists.")
-
-    if mode == "write":
-        if not p.stem.isidentifier():
-            return err("File name must be a valid MATLAB identifier.", log = False)
-        if not overwrite and exists == 2:
-            return err(f"'{file}' already exists in MATLAB's current working directory or on the MATLAB path.", log = False)
-    else: 
-        if exists == 0:
-            return err(f"'{file}' not found in MATLAB's current working directory or on the MATLAB path.", log = False)
+        if write:
+            if not p.stem.isidentifier():
+                return err("File name must be a valid MATLAB identifier.", log=False)
+            if exists == 2 and not overwrite:
+                return err(f"'{file}' already exists in MATLAB's current working directory or on the MATLAB path.", log=False)
+        else:
+            if exists == 0:
+                return err(f"'{file}' not found in MATLAB's current working directory or on the MATLAB path.", log=False)
 
     return None
 
