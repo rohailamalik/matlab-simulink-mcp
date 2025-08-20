@@ -17,6 +17,7 @@ If a tool is not working, do not continue attempting to use it more than twice i
 Important:
 You are not allowed to access anything outside current working directory, so no absolute path usage or any messing with MATLAB's current path.
 You are not allowed to delete any file. Never close any file/model/window unless user asks you to.
+Remember that when using Simulink, you cannot undo your actions. You'll have to do them manually.
 
 """
 

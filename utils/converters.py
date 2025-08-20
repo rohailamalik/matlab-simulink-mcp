@@ -7,7 +7,7 @@
 import re
 import math
 import numpy as np
-from typing import Any, List 
+from typing import Any
 import matlab.engine
 
 
@@ -20,7 +20,7 @@ def cmd_to_regex(cmd: str) -> re.Pattern:
         return re.compile(rf"\b{escaped}\b")
 
 
-def reshape_recursive(flat_list: List[Any], shape: List[int]) -> List[Any]:
+def reshape_recursive(flat_list: list[Any], shape: list[int]) -> list[Any]:
     """
     Reshape a flat list into a nested list with the given shape (e.g., [2, 3] for 2x3).
     Works for string, char, and cell array conversions.
@@ -35,7 +35,7 @@ def reshape_recursive(flat_list: List[Any], shape: List[int]) -> List[Any]:
     return _reshape(flat_list, shape)
 
 
-def convert_supported(data: Any) -> List[Any]:
+def convert_supported(data: Any) -> list[Any]:
 
     # Automatically converted by MATLAB to native Python types
     if isinstance(data, (int, float, bool, str, dict, type(None))):
@@ -54,7 +54,7 @@ def convert_supported(data: Any) -> List[Any]:
         return np_array.tolist()
 
 
-def flatten_struct_array(array_name: str, eng) -> List[Any]:
+def flatten_struct_array(array_name: str, eng) -> list[Any]:
     "Converts a MATLAB struct array to a flattened list of dictionaries."
 
     # Even 1D Struct arrays cannot be fetched so we need to save the flattened array to workspace as a temporary variable.
@@ -70,7 +70,7 @@ def flatten_struct_array(array_name: str, eng) -> List[Any]:
     return converted_array
 
 
-def convert_non_supported(array_name: str, eng) -> List[Any]:
+def convert_non_supported(array_name: str, eng) -> list[Any]:
     """
     Converts MATLAB data types such as nD cell, string, char and struct arrays.
     These are not automatically converted by MATLAB to native Python types and so can't even be fetched from the workspace.

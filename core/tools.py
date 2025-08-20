@@ -1,7 +1,7 @@
 import inspect
 import sys
 from difflib import get_close_matches
-from core.state import get_state 
+from core.state import get_state, init_state 
 from utils.converters import fetch
 from utils.checks import check_file, check_code
 from utils.utils import get_cwd, err, res
@@ -9,14 +9,47 @@ from langchain_core.tools import tool, BaseTool
 from pathlib import Path
 import matlab.engine
 import tempfile
+from typing import Any, Literal
+
+
 
 # TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
 # for graph reading etc it's just an addon, not necessary since the llm can just parse through arrays plotting the graph
 # though it is not much optimal at large lengths etc
 
+# TODO: figure out some how to undo stuff in simulink
+# TODO: figure out how to remove redline connections left after deleting blocks in simulink
+
+'''
+
 
 @tool
-def read_simulink(system: str) -> dict:
+def snapshot_simulink(system: str) -> dict:
+    """
+    Take a PNG snapshot of a Simulink system/subsystem
+    and return it as a base64-encoded data URI.
+    
+    Args:
+        system: Path to the system or subsystem (e.g. "myModel/Controller").
+    """
+
+    eng = get_state().eng
+    if (issues:= check_file(eng, system, adv = False)):
+        return issues 
+
+    try:
+        b64 = eng.snapshot_b64(system, 150) 
+        data_uri = f"data:image/png;base64,{b64}"
+        return [{
+            "type": "image_url", 
+            "image_url": {"url": data_uri}
+            }]
+    except Exception as e:
+        return err(f"Error taking snapshot: {e}")
+'''
+
+@tool
+def read_simulink(system: str) -> dict[str, Any]:
     """
     Returns JSON information about the layout of a simulink object containing elements, ports, connections, etc.
 
@@ -33,13 +66,39 @@ def read_simulink(system: str) -> dict:
     
     try:
         eng.load_system(system)
-        return eng.describe_system(system) 
+        content = eng.describe_system(system) 
+        return res(content)
     except Exception:
         return err("Error reading file.")
+    
+
+@tool
+def clean_simulink(target: Literal["block", "line", "both"], strict: bool = False) -> dict[str, Any]:
+    """
+    Cleans up currently open Simulink system or subsystem by deleting unconnected lines and blocks.
+    Recommended to use after modifying models to ensure cleanup of any leftover lines.
+
+    Arguments:
+        target: "block", "line" or "both"
+        strict: When true, the function deletes even partially unconnected elements and not only fully unconnected ones.
+    
+    Returns:
+        A dictionary of tool execution status    
+    """
+
+    eng = get_state().eng
+    mode = "dangling" if strict else "orphaned"
+    
+    try:
+        content = eng.cleanup(target, mode, nargout = 1)
+    except Exception:
+        return err("Error executing operation.")
+    
+    return res(content)        
 
   
 @tool
-def read_code(file: str, open: bool = False) -> dict:
+def read_code(file: str, open: bool = False) -> dict[str, Any]:
     """
     Returns the code inside a MATLAB script file (or any text file), and optionally opens it in MATLAB window.
 
@@ -71,7 +130,7 @@ def read_code(file: str, open: bool = False) -> dict:
 
 
 @tool
-def save_code(code: str, file: str, overwrite: bool = False) -> dict:
+def save_code(code: str, file: str, overwrite: bool = False) -> dict[str, Any]:
     """
     Validates and saves MATLAB code to a .m file.
 
@@ -108,7 +167,7 @@ def save_code(code: str, file: str, overwrite: bool = False) -> dict:
 
 
 @tool
-def run_code(code: str) -> dict:
+def run_code(code: str) -> dict[str, Any]:
     """
     Executes code in MATLAB, and returns command window results as a string.
 
@@ -148,13 +207,13 @@ def run_code(code: str) -> dict:
 
 
 @tool
-def get_variables(variables: list[str], convert = False) -> dict:
+def get_variables(variables: list[str], convert = False) -> dict[str, Any]:
     """
     Fetches specified variables from MATLAB workspace.
 
     Parameters:
         variables: List of variable names to retrieve from workspace.
-        convert: Whether to convert the variables to Python types. When False, the values will be returned as string-wrapped MATLAB types.
+        convert: Whether to convert the variables to Python types. Otherwise, values will be returned as string-wrapped MATLAB types. False by default
 
     Returns:
         A dictionary of tool execution status, variables and their values.
@@ -182,7 +241,7 @@ def get_variables(variables: list[str], convert = False) -> dict:
 
 
 @tool
-def search_library(query) -> dict:
+def search_library(query) -> dict[str, Any]:
     """
     Searches for a block name in the Simulink block library and returns all matching source paths.
 
