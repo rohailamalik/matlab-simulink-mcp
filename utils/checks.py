@@ -1,13 +1,10 @@
 import re
 from pathlib import Path
-from typing import Optional
 from core.state import get_state
 from utils.utils import err
-from pathlib import Path
-from typing import Optional
 
 
-def check_file(eng, file: str, write: bool = False, overwrite: bool = False, adv: bool = True) -> Optional[dict]:
+def check_file(eng, file: str, write: bool = False, overwrite: bool = False, adv: bool = True) -> dict | None:
     """Validate a MATLAB file operation before use."""
     p = Path(file)
 
@@ -32,7 +29,7 @@ def check_file(eng, file: str, write: bool = False, overwrite: bool = False, adv
     return None
 
 
-def check_commands(code: str) -> Optional[dict]:
+def check_commands(code: str) -> dict | None:
     """Checks a given code string for forbidden commands and raises error if any found."""
     clean_code = code.lower()
 
@@ -45,7 +42,7 @@ def check_commands(code: str) -> Optional[dict]:
     return None
 
 
-def check_paths(code: str) -> Optional[dict]:
+def check_paths(code: str) -> dict | None:
     """Checks string literals in code for forbidden path usage and raises error if found."""
     
     literals = re.findall(r"(?:'[^']*'|\"[^\"]*\")", code)
@@ -69,5 +66,5 @@ def check_paths(code: str) -> Optional[dict]:
     return None
 
 
-def check_code(code: str) -> Optional[dict]:
+def check_code(code: str) -> dict | None:
     return check_commands(code) or check_paths(code)

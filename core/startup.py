@@ -1,14 +1,14 @@
 import re
 import json
-import matlab.engine
-from typing import Optional, List # Optional is used in state.py through import *
+import matlab.engine 
 from pathlib import Path 
 from utils.logger import logger
 from utils.converters import cmd_to_regex
 from pathfinder import get_path
+from typing import Any
 
 
-def search_sessions() -> list:
+def search_sessions() -> list[str]:
     """Searches and returns a list of shared MATLAB sessions."""
     try:
         logger.info("Searching for shared MATLAB sessions...")
@@ -17,7 +17,7 @@ def search_sessions() -> list:
         raise RuntimeError(f"Error searching for MATLAB sessions: {e}")
     
 
-def select_session():
+def select_session() -> str:
     """Select a MATLAB session from available shared sessions."""
     while True:
         sessions = search_sessions() or []
@@ -45,7 +45,7 @@ def select_session():
             logger.info("Invalid choice. Please enter a valid number.")
 
 
-def connect_session(session: str):
+def connect_session(session: str) -> matlab.engine.matlabengine.MatlabEngine:
     """Connects to a shared MATLAB sessions."""
     try: 
         eng = matlab.engine.connect_matlab(session)
@@ -57,7 +57,7 @@ def connect_session(session: str):
         raise RuntimeError(f"Unexpected error during MATLAB connection: {e}")
     
 
-def load_simlib(path: Path) -> dict:
+def load_simlib(path: Path) -> dict[str, Any]:
     """Loads the dictionary based data for Simulink model library"""
     
     if not path:
@@ -77,7 +77,7 @@ def load_simlib(path: Path) -> dict:
         raise RuntimeError(f"Unexpected error while loading server Simulink Library data: {e}")
     
 
-def load_blacklist(path: Path) -> List[re.Pattern]:
+def load_blacklist(path: Path) -> list[re.Pattern]:
     """Loads blacklisted commands from a text file, ignoring comments and empty lines."""
 
     if not path:
@@ -103,7 +103,7 @@ def load_blacklist(path: Path) -> List[re.Pattern]:
         raise RuntimeError(f"Unexpected error while loading blacklisted commands: {e}")
         
 
-def set_helpers(path: Path, eng):
+def set_helpers(path: Path, eng) -> None:
     """Add MATLAB helper functions used in the tools to the MATLAB path"""
 
     if not path:

@@ -5,11 +5,11 @@ from core.startup import *
 @dataclass
 class ServerState:
     """Global state for session."""
-    session: Optional[str] = None
-    eng: Optional[matlab.engine.MatlabEngine] = None
-    simlib: Optional[dict] = None
-    blacklist: Optional[List[re.Pattern]] = None
-    helpers: Optional[Path] = None
+    session: str | None = None
+    eng: matlab.engine.MatlabEngine | None = None
+    simlib: dict | None = None
+    blacklist: list[re.Pattern] | None = None
+    helpers: Path | None = None
             
     def initialize(self):
         """Initializes the state."""
