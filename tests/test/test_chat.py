@@ -1,5 +1,5 @@
-from llm.agent import sim_agent
-from core.state import init_state
+from simai.llm.agent import sim_agent
+from simai.core.state import init_state
 from langchain_core.messages import HumanMessage
 
 init_state()

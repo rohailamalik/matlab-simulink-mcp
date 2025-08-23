@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
-from core.state import get_state
-from utils.utils import err
+from matlab_mcp.server.state import get_state
+from matlab_mcp.utils.responses import err
 
 
 def check_file(eng, file: str, write: bool = False, overwrite: bool = False, adv: bool = True) -> dict | None:

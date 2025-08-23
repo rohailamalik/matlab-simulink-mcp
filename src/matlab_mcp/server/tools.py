@@ -1,16 +1,17 @@
-import inspect
 import sys
-from difflib import get_close_matches
-from core.state import get_state, init_state 
-from utils.converters import fetch
-from utils.checks import check_file, check_code
-from utils.utils import get_cwd, err, res
-from langchain_core.tools import tool, BaseTool
-from pathlib import Path
-import matlab.engine
+import inspect
 import tempfile
+import matlab.engine
+from pathlib import Path
 from typing import Any, Literal
+from difflib import get_close_matches
+from langchain_core.tools import tool, BaseTool
 
+from matlab_mcp.server.state import get_state, get_cwd
+from matlab_mcp.utils.convert import fetch
+from matlab_mcp.utils.security import check_file, check_code
+from matlab_mcp.utils.responses import err, answer
+from matlab_mcp.main import mcp
 
 
 # TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
@@ -48,7 +49,7 @@ def snapshot_simulink(system: str) -> dict:
         return err(f"Error taking snapshot: {e}")
 '''
 
-@tool
+@mcp.tool()
 def read_simulink(system: str) -> dict[str, Any]:
     """
     Returns JSON information about the layout of a simulink object containing elements, ports, connections, etc.
@@ -67,12 +68,12 @@ def read_simulink(system: str) -> dict[str, Any]:
     try:
         eng.load_system(system)
         content = eng.describe_system(system) 
-        return res(content)
+        return answer(content)
     except Exception:
         return err("Error reading file.")
     
 
-@tool
+@mcp.tool()
 def clean_simulink(target: Literal["block", "line", "both"], strict: bool = False) -> dict[str, Any]:
     """
     Cleans up currently open Simulink system or subsystem by deleting unconnected lines and blocks.
@@ -94,10 +95,10 @@ def clean_simulink(target: Literal["block", "line", "both"], strict: bool = Fals
     except Exception:
         return err("Error executing operation.")
     
-    return res(content)        
+    return answer(content)        
 
   
-@tool
+@mcp.tool()
 def read_code(file: str, open: bool = False) -> dict[str, Any]:
     """
     Returns the code inside a MATLAB script file (or any text file), and optionally opens it in MATLAB window.
@@ -126,10 +127,10 @@ def read_code(file: str, open: bool = False) -> dict[str, Any]:
         error_msg = str(e).strip().splitlines()[-1]
         return err(f"Error reading file: {error_msg}")
         
-    return res(content)    
+    return answer(content)    
 
 
-@tool
+@mcp.tool()
 def save_code(code: str, file: str, overwrite: bool = False) -> dict[str, Any]:
     """
     Validates and saves MATLAB code to a .m file.
@@ -147,7 +148,7 @@ def save_code(code: str, file: str, overwrite: bool = False) -> dict[str, Any]:
     if (issues:= check_file(eng, file, True, overwrite=overwrite)):
         return issues
 
-    try:
+    try: #Path(str(eng.pwd(nargout=1)))
         path = get_cwd(eng) / Path(file)
         path.parent.mkdir(parents=True, exist_ok=True) 
         with path.open("w") as f:
@@ -163,19 +164,19 @@ def save_code(code: str, file: str, overwrite: bool = False) -> dict[str, Any]:
     if issues:
         return err(f"Code saved but failed validation with errors:\n" + "\n".join(issues))
     else:
-        return res(f"Code validated and saved successfully.")
+        return answer(f"Code validated and saved successfully.")
 
 
-@tool
+@mcp.tool()
 def run_code(code: str) -> dict[str, Any]:
     """
-    Executes code in MATLAB, and returns command window results as a string.
+    Executes code in MATLAB, and returns command window answerults as a string.
 
     Parameters:
         code: MATLAB code to run.
 
     Returns:
-        A dictionary of tool execution status and results printed to command window.
+        A dictionary of tool execution status and answerults printed to command window.
     """
 
     # TODO: Later implement a canvas based editor
@@ -190,13 +191,13 @@ def run_code(code: str) -> dict[str, Any]:
 
     try: 
         path = get_cwd(eng) / "canvas.m"
-        results = _write_and_run(path)
-        return res(results)
+        answerults = _write_and_run(path)
+        return answer(answerults)
 
     except PermissionError: # Fallback to temporary file
         path = Path(tempfile.gettempdir()) / "canvas.m"
-        results = _write_and_run(path)
-        return res(results)
+        answerults = _write_and_run(path)
+        return answer(answerults)
 
     except matlab.engine.MatlabExecutionError as e:
         error_msg = str(e).strip().splitlines()[-1]
@@ -206,7 +207,7 @@ def run_code(code: str) -> dict[str, Any]:
         return err("Unexpected error while running MATLAB code.")
 
 
-@tool
+@mcp.tool()
 def get_variables(variables: list[str], convert = False) -> dict[str, Any]:
     """
     Fetches specified variables from MATLAB workspace.
@@ -221,26 +222,26 @@ def get_variables(variables: list[str], convert = False) -> dict[str, Any]:
 
     eng = get_state().eng
 
-    result = {}
+    answerult = {}
     for var in variables:
         try:
             # Cannot do "if in eng.workspace" since it is not a native Python dict, rather a MATLAB object with some dict-like properties.
-            # eng.exist automatically ensures that the var is a proper variable name, without any code injection which could execute through evalc
+            # eng.exist automatically ensuanswer that the var is a proper variable name, without any code injection which could execute through evalc
             if eng.exist(var, "var") == 1: 
                 if convert:
-                    result[var] = fetch(eng, var)
+                    answerult[var] = fetch(eng, var)
                 else:
-                    result[var] = eng.evalc(f"{var}", nargout=1)
+                    answerult[var] = eng.evalc(f"{var}", nargout=1)
             else:
-                result[var] = "Not in workspace"
+                answerult[var] = "Not in workspace"
 
         except Exception:
             return err(f"Error getting variable '{var}'.")
         
-    return res(result)
+    return answer(answerult)
 
 
-@tool
+@mcp.tool()
 def search_library(query) -> dict[str, Any]:
     """
     Searches for a block name in the Simulink block library and returns all matching source paths.
@@ -260,8 +261,8 @@ def search_library(query) -> dict[str, Any]:
     try:
         block_names = list(simlib.keys())
         matches = get_close_matches(query, block_names, n=n, cutoff=cutoff)
-        results = {name: simlib[name]['paths'] for name in matches}
-        return res(results)
+        answerults = {name: simlib[name]['paths'] for name in matches}
+        return answer(answerults)
     
     except Exception as e:
        return err(f"Error searching Simulink library.")

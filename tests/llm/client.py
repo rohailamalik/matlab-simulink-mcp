@@ -1,9 +1,12 @@
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from config.settings import settings
+import os
 import httpx
+from dotenv import load_dotenv, find_dotenv
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
+load_dotenv(find_dotenv(), override=False)
 
 
-openai_api_key = settings.openai_api_key
+openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     raise ValueError("OpenAI API Key is not set. Please add it to the .env file.")
 

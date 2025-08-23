@@ -1,4 +1,4 @@
-from core.tools import mcp
+from simai.core.tools import mcp
 
 
 if __name__ =="__main__":

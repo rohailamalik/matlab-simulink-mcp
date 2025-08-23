@@ -1,6 +1,6 @@
 from langgraph.prebuilt import create_react_agent
-from llm.client import llm
-from core.tools import tools
+from tests.llm.client import llm
+from src.matlab_mcp.server.tools import tools
 
 system_prompt = """
 You are an engineering assistant specialized in Simulink and MATLAB. You have access to a set of tools that will allow you to interact with Simulink models and MATLAB scripts. 
