@@ -1,10 +1,7 @@
-from matlab_mcp.utils.logger import logger
+from matlab_simulink_mcp.utils.logger import logger
 import matlab.engine
-from matlab_mcp.server.state import get_state
-from mcp.server.fastmcp import FastMCP
-
-
-mcp = FastMCP("Demo")
+from matlab_simulink_mcp.core.state import get_state
+from matlab_simulink_mcp.core.server import mcp
 
 
 def search_sessions() -> list[str]:

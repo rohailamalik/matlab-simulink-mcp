@@ -1,5 +1,5 @@
 from typing import Any
-from matlab_mcp.utils.logger import logger
+from matlab_simulink_mcp.utils.logger import logger
 
 
 def answer(content: Any) -> dict:
