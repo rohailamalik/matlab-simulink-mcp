@@ -1,4 +1,4 @@
-from matlab_mcp.main import run
+from matlab_simulink_mcp.main import run
 
 if __name__ == "__main__":
     run()

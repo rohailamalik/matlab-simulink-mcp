@@ -4,14 +4,14 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from platformdirs import user_log_path
 
-import matlab_mcp
+import matlab_simulink_mcp
 
 
 def create_log_file(file: str) -> Path:
     if getattr(sys, "frozen", False): 
         dir = Path(sys.executable).parent / "logs" / file
     else:
-        dir = Path(matlab_mcp.__file__).resolve().parent / "logs" / file
+        dir = Path(matlab_simulink_mcp.__file__).resolve().parent / "logs" / file
 
     try: 
         dir.mkdir(parents=True, exist_ok=True)

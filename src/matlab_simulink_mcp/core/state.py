@@ -7,8 +7,8 @@ from pathlib import Path
 from importlib import resources
 from dataclasses import dataclass, fields
 
-from matlab_mcp import data
-from matlab_mcp.utils.convert import to_regex_list
+from matlab_simulink_mcp import data
+from matlab_simulink_mcp.utils.convert import to_regex_list
 
 
 @dataclass
@@ -52,8 +52,9 @@ def get_state() -> SessionState:
     return _state
 
 
-def get_cwd(eng) -> Path:
+def get_cwd() -> Path:
     try:
+        eng = get_state().eng
         return Path(str(eng.pwd(nargout=1)))
     except Exception as e:
         raise RuntimeError(f"Error getting current working directory: {e}")

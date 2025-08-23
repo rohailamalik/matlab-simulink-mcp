@@ -5,13 +5,11 @@ import matlab.engine
 from pathlib import Path
 from typing import Any, Literal
 from difflib import get_close_matches
-from langchain_core.tools import tool, BaseTool
 
-from matlab_mcp.server.state import get_state, get_cwd
-from matlab_mcp.utils.convert import fetch
-from matlab_mcp.utils.security import check_file, check_code
-from matlab_mcp.utils.responses import err, answer
-from matlab_mcp.main import mcp
+from matlab_simulink_mcp.core.state import get_state, get_cwd
+from matlab_simulink_mcp.utils.convert import fetch
+from matlab_simulink_mcp.utils.security import check_file, check_code
+from matlab_simulink_mcp.utils.responses import err, answer
 
 
 # TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
@@ -49,7 +47,7 @@ def snapshot_simulink(system: str) -> dict:
         return err(f"Error taking snapshot: {e}")
 '''
 
-@mcp.tool()
+
 def read_simulink(system: str) -> dict[str, Any]:
     """
     Returns JSON information about the layout of a simulink object containing elements, ports, connections, etc.
@@ -73,7 +71,6 @@ def read_simulink(system: str) -> dict[str, Any]:
         return err("Error reading file.")
     
 
-@mcp.tool()
 def clean_simulink(target: Literal["block", "line", "both"], strict: bool = False) -> dict[str, Any]:
     """
     Cleans up currently open Simulink system or subsystem by deleting unconnected lines and blocks.
@@ -98,7 +95,6 @@ def clean_simulink(target: Literal["block", "line", "both"], strict: bool = Fals
     return answer(content)        
 
   
-@mcp.tool()
 def read_code(file: str, open: bool = False) -> dict[str, Any]:
     """
     Returns the code inside a MATLAB script file (or any text file), and optionally opens it in MATLAB window.
@@ -130,7 +126,6 @@ def read_code(file: str, open: bool = False) -> dict[str, Any]:
     return answer(content)    
 
 
-@mcp.tool()
 def save_code(code: str, file: str, overwrite: bool = False) -> dict[str, Any]:
     """
     Validates and saves MATLAB code to a .m file.
@@ -149,7 +144,7 @@ def save_code(code: str, file: str, overwrite: bool = False) -> dict[str, Any]:
         return issues
 
     try: #Path(str(eng.pwd(nargout=1)))
-        path = get_cwd(eng) / Path(file)
+        path = get_cwd() / Path(file)
         path.parent.mkdir(parents=True, exist_ok=True) 
         with path.open("w") as f:
             f.write(code)
@@ -167,7 +162,6 @@ def save_code(code: str, file: str, overwrite: bool = False) -> dict[str, Any]:
         return answer(f"Code validated and saved successfully.")
 
 
-@mcp.tool()
 def run_code(code: str) -> dict[str, Any]:
     """
     Executes code in MATLAB, and returns command window answerults as a string.
@@ -190,7 +184,7 @@ def run_code(code: str) -> dict[str, Any]:
         return eng.evalc(f"run('{path.name}')", nargout=1)
 
     try: 
-        path = get_cwd(eng) / "canvas.m"
+        path = get_cwd() / "canvas.m"
         answerults = _write_and_run(path)
         return answer(answerults)
 
@@ -207,7 +201,6 @@ def run_code(code: str) -> dict[str, Any]:
         return err("Unexpected error while running MATLAB code.")
 
 
-@mcp.tool()
 def get_variables(variables: list[str], convert = False) -> dict[str, Any]:
     """
     Fetches specified variables from MATLAB workspace.
@@ -241,7 +234,6 @@ def get_variables(variables: list[str], convert = False) -> dict[str, Any]:
     return answer(answerult)
 
 
-@mcp.tool()
 def search_library(query) -> dict[str, Any]:
     """
     Searches for a block name in the Simulink block library and returns all matching source paths.
@@ -271,6 +263,3 @@ def search_library(query) -> dict[str, Any]:
 # ['VehicleWithFourSpeedTransmission/Inertia', newline, 'Impeller']
 
 
-# Get all the tools 
-_current_module = sys.modules[__name__]
-tools = [obj for name, obj in inspect.getmembers(_current_module) if isinstance(obj, BaseTool) ]

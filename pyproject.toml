@@ -1,7 +1,7 @@
 [project]
-name = "matlab_mcp"
+name = "matlab_simulink_mcp"
 version = "0.1.0"
-description = "Add your description here"
+description = "An MCP server for allowing LLMs to work with MATLAB and Simulink"
 readme = "README.md"
 requires-python = "==3.12.10"
 dependencies = []
