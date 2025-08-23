@@ -1,17 +1,8 @@
-from pathlib import Path
 from typing import Any
-from utils.logger import logger
+from matlab_mcp.utils.logger import logger
 
 
-def get_cwd(eng) -> Path:
-    """Safely extracts current MATLAB working directory."""
-    try:
-        return Path(str(eng.pwd(nargout=1)))
-    except Exception as e:
-        raise RuntimeError(f"Unexpected error while getting current working directory: {e}")
-
-
-def res(content: Any) -> dict:
+def answer(content: Any) -> dict:
     """Returns a dictionary for tool returns in case of successful execution."""
     return {"status": "Success", "Content": content}
 
@@ -29,4 +20,3 @@ def err(content: Any, log: bool = True, security = False) -> dict:
             logger.exception(content)
 
     return {"status": "Error", "Content": content}
-

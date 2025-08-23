@@ -11,13 +11,28 @@ from typing import Any
 import matlab.engine
 
 
-def cmd_to_regex(cmd: str) -> re.Pattern:
+def to_regex(cmd: str) -> re.Pattern:
     """Converts a MATLAB command to a regex pattern."""
     if cmd == "!": # This command is only used at the beginning of a line
         return re.compile(r"^\s*!.*", re.MULTILINE)
     else:
         escaped = re.escape(cmd)
         return re.compile(rf"\b{escaped}\b")
+    
+
+def to_regex_list(content: str) -> list[re.Pattern]:
+    """
+    Converts each line in a text to regex, returning a list.
+    Ignores comments (starting with #) and empty lines.
+    """
+    patterns = []
+    for line in content:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        pattern = to_regex(stripped)
+        patterns.append(pattern)
+    return patterns
 
 
 def reshape_recursive(flat_list: list[Any], shape: list[int]) -> list[Any]:
@@ -35,7 +50,7 @@ def reshape_recursive(flat_list: list[Any], shape: list[int]) -> list[Any]:
     return _reshape(flat_list, shape)
 
 
-def convert_supported(data: Any) -> list[Any]:
+def convert_supported(data: Any) -> Any:
 
     # Automatically converted by MATLAB to native Python types
     if isinstance(data, (int, float, bool, str, dict, type(None))):
@@ -107,16 +122,19 @@ def fetch(eng, var: str) -> Any:
     3. Fallback: fetch using JSON encoding
     Raises a RuntimeError if all attempts fail.
     """
-    try_func = [
+    attempts = [
         lambda: convert_supported(eng.workspace[var]),
         lambda: convert_non_supported(var, eng),
-        lambda: eng.jsonencode(var, 'PrettyPrint', True, nargout=1)
+        lambda: eng.jsonencode(var, 'PrettyPrint', True, nargout=1),
     ]
+    last_exc = None
+    for attempt in attempts:
+        try:
+            res = attempt()
+            if res is not None:
+                return res
+        except Exception as e:
+            last_exc = e
+    raise RuntimeError(f"Failed to fetch '{var}' from MATLAB.") from last_exc
 
-    for i, attempt in enumerate(try_func, 1):
-        return attempt()
-
-
-            
     
-        
