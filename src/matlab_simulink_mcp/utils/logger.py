@@ -8,28 +8,31 @@ import matlab_simulink_mcp
 
 
 def create_log_file(file: str) -> Path:
-    if getattr(sys, "frozen", False): 
-        dir = Path(sys.executable).parent / "logs" / file
-    else:
-        dir = Path(matlab_simulink_mcp.__file__).resolve().parent / "logs" / file
+    if getattr(sys, "frozen", False):
+        base = Path(sys.executable).parent / "logs"
+    else: # create file parallel to src
+        base = Path(matlab_simulink_mcp.__file__).resolve().parent.parent.parent / "logs"
 
-    try: 
-        dir.mkdir(parents=True, exist_ok=True)
+    try:
+        base.mkdir(parents=True, exist_ok=True) 
+        return base / file                      
     except PermissionError:
-        dir = user_log_path("matlab_mcp") / file
-        dir.mkdir(parents=True, exist_ok=True)
+        # fallback user log dir
+        base = user_log_path("matlab_simulink_mcp")
+        base.mkdir(parents=True, exist_ok=True)
+        return base / file 
     except Exception as e:
-        raise RuntimeError(f"Error creating log file: {e}")                 
+        raise RuntimeError(f"Error creating log file: {e}")               
 
 
-def setup_logger(name: str = "MATLAB_MCP") -> logging.Logger:
+def setup_logger(name: str = "matlab_simulink_mcp") -> logging.Logger:
     logger = logging.getLogger(name)
     if logger.handlers:
         return logger
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 
-    log_path = create_log_file("matlab_mcp.log")
+    log_path = create_log_file("matlab_simulink_mcp.log")
     fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
 
     fh = RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=3, encoding="utf-8")
