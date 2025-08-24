@@ -1,5 +1,6 @@
 import re
 import json
+import sys
 import matlab.engine 
 
 from typing import Any 
@@ -9,7 +10,7 @@ from dataclasses import dataclass, fields
 
 from matlab_simulink_mcp import data
 from matlab_simulink_mcp.utils.convert import to_regex_list
-
+import matlab_simulink_mcp
 
 @dataclass
 class SessionState:
@@ -36,9 +37,12 @@ class SessionState:
         self.blacklist = to_regex_list((resources.files(data) / "blacklist.txt").read_text())
     
     def load_helpers(self) -> Path:
-        path = str(resources.as_file(data) / "helpers")
-        self.eng.addpath(str(path), nargout=0)
-        self.helpers = Path(path)
+        if getattr(sys, "frozen", False):
+            pth = Path(sys._MEIPASS) / "matlab_simulink_mcp/data/helpers"
+        else:
+            pth = Path(matlab_simulink_mcp.__file__).resolve().parent / "data/helpers"
+        self.eng.addpath(str(pth), nargout=0)
+        self.helpers = Path(pth)
             
     def validate(self):
         for f in fields(self):

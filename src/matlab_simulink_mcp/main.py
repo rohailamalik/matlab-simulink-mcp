@@ -44,13 +44,13 @@ def run():
         session = select_session()
         
         logger.info(f"Connecting to MATLAB session: {session}")
-        get_state().initialize()
+        get_state().initialize(session)
         
         logger.info(f"Connected to MATLAB session: {session}")
         mcp.run(transport='stdio')
     
     except Exception as e:
-        raise RuntimeError("Error: {e}")
+        raise RuntimeError("Error starting: {e}")
     
 
 if __name__ == "__main__":
