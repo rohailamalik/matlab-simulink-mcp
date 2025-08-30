@@ -3,12 +3,13 @@ name = "matlab_simulink_mcp"
 version = "0.1.0"
 description = "An MCP server for allowing LLMs to work with MATLAB and Simulink"
 readme = "README.md"
-requires-python = "<3.13"
+requires-python = ">=3.11,<3.13"
 dependencies = [
     "fastmcp>=2.11.3",
     "langchain-openai>=0.3.31",
     "langgraph>=0.6.6",
     "matlabengine>=25.1.2",
+    "mcp[cli]>=1.13.1",
     "numpy>=2.3.2",
     "platformdirs>=4.3.8",
 ]

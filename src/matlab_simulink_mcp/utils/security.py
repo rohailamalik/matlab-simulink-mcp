@@ -1,35 +1,9 @@
 import re
 from pathlib import Path
 from matlab_simulink_mcp.core.state import get_state
-from matlab_simulink_mcp.utils.responses import err
 
 
-def check_file(eng, file: str, write: bool = False, overwrite: bool = False, adv: bool = True) -> dict | None:
-    """Validate a MATLAB file operation before use."""
-    p = Path(file)
-
-    if p.is_absolute() or ".." in p.parts:
-        return err("Access to absolute or parent paths is forbidden. Only files on MATLAB path are usable.", security=True)
-
-    if adv:
-        try:
-            exists = eng.exist(file, nargout=1)
-        except Exception:
-            return err("Error checking if the file exists.")
-
-        if write:
-            if not p.stem.isidentifier():
-                return err("File name must be a valid MATLAB identifier.", log=False)
-            if exists == 2 and not overwrite:
-                return err(f"'{file}' already exists in MATLAB's current working directory or on the MATLAB path.", log=False)
-        else:
-            if exists == 0:
-                return err(f"'{file}' not found in MATLAB's current working directory or on the MATLAB path.", log=False)
-
-    return None
-
-
-def check_commands(code: str) -> dict | None:
+def check_for_commands(code: str):
     """Checks a given code string for forbidden commands and raises error if any found."""
     clean_code = code.lower()
 
@@ -37,12 +11,9 @@ def check_commands(code: str) -> dict | None:
 
     for flag in blacklist:
         if re.search(flag, clean_code):
-            return err(f"Use of {re.sub(r'^\\b|\\b$', '', flag).replace(r'\.', '.')} command is not allowed.", security = True)
-        
-    return None
+            return f"Use of {re.sub(r'^\\b|\\b$', '', flag).replace(r'\.', '.')} command is not allowed."
 
-
-def check_paths(code: str) -> dict | None:
+def check_for_paths(code: str):
     """Checks string literals in code for forbidden path usage and raises error if found."""
     
     literals = re.findall(r"(?:'[^']*'|\"[^\"]*\")", code)
@@ -55,16 +26,22 @@ def check_paths(code: str) -> dict | None:
         path = Path(path_str)
 
         if path.is_absolute():
-            return err("Absolute paths are not allowed. Only files on MATLAB path are accessible.", security = True)
+            return "Absolute paths are not allowed. Only files on MATLAB path are accessible."
 
         if ".." in path.parts:
-            return err("Paths with .. are not allowed. Only files on MATLAB path are accessible.", security = True)
+            return "Paths with .. are not allowed. Only files on MATLAB path are accessible."
 
         if "*" in path_str or "?" in path_str:
-            return err("Paths with * or ? are not allowed.", security = True)
+            return "Paths with * or ? are not allowed."
 
-    return None
-
-
-def check_code(code: str) -> dict | None:
-    return check_commands(code) or check_paths(code)
+def check_code(code: str):
+    """Checks a given code string for forbidden commands or paths and raises error if any found."""
+    issues = check_for_commands(code) or check_for_paths(code)
+    if issues:
+        raise PermissionError(issues)
+    
+def check_path(file: str):
+    """Checks a given file path for absolute or parent paths and raises error if found."""
+    f = Path(file)
+    if f.is_absolute() or ".." in f.parts:
+        raise PermissionError("Access to absolute or parent paths is forbidden. Only files on MATLAB path are usable.")
