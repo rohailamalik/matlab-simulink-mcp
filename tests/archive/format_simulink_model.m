@@ -1,4 +1,4 @@
-function result = cleanup(target, mode)
+function result = format_simulink_model(target, mode, arrange)
 % CLEANUP  Remove dangling or orphaned blocks/lines from a Simulink system.
 
 % Args:
@@ -14,6 +14,10 @@ function result = cleanup(target, mode)
 
 result = struct('deletedBlocks',0,'deletedLines',0);
 system = gcs();
+
+if arrange
+    Simulink.BlockDiagram.arrangeSystem(system)
+end 
 
 % Lines
 if strcmpi(target,'line') || strcmpi(target,'both')

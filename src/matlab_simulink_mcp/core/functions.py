@@ -1,16 +1,16 @@
-import sys
-import inspect
 import tempfile
 import matlab.engine
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 from difflib import get_close_matches
 
-from matlab_simulink_mcp.core.state import get_state, get_cwd
-from matlab_simulink_mcp.utils.convert import fetch
-from matlab_simulink_mcp.utils.security import check_file, check_code
-from matlab_simulink_mcp.utils.responses import err, answer
+import asyncio
 
+from matlab_simulink_mcp.utils.convert import fetch
+from matlab_simulink_mcp.utils.security import check_path, check_code
+from matlab_simulink_mcp.core.state import get_engine, get_state
+from fastmcp.exceptions import ToolError
+from matlab_simulink_mcp.utils.logger import logger
 
 # TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
 # for graph reading etc it's just an addon, not necessary since the llm can just parse through arrays plotting the graph
@@ -19,36 +19,17 @@ from matlab_simulink_mcp.utils.responses import err, answer
 # TODO: figure out some how to undo stuff in simulink
 # TODO: figure out how to remove redline connections left after deleting blocks in simulink
 
-'''
+
+def _raise_error(msg: str, exception: Exception | None = None):
+    if exception:
+        logger.error(f"{msg} Original error: {str(exception)}")
+        if isinstance(exception, matlab.engine.MatlabExecutionError):
+          error_msg = str(exception).strip().splitlines()[-1]
+          raise ToolError(f"MATLAB returned error: {error_msg}")    
+    raise ToolError(msg)
 
 
-@tool
-def snapshot_simulink(system: str) -> dict:
-    """
-    Take a PNG snapshot of a Simulink system/subsystem
-    and return it as a base64-encoded data URI.
-    
-    Args:
-        system: Path to the system or subsystem (e.g. "myModel/Controller").
-    """
-
-    eng = get_state().eng
-    if (issues:= check_file(eng, system, adv = False)):
-        return issues 
-
-    try:
-        b64 = eng.snapshot_b64(system, 150) 
-        data_uri = f"data:image/png;base64,{b64}"
-        return [{
-            "type": "image_url", 
-            "image_url": {"url": data_uri}
-            }]
-    except Exception as e:
-        return err(f"Error taking snapshot: {e}")
-'''
-
-
-def read_simulink(system: str) -> dict[str, Any]:
+async def read_simulink_model(system: str) -> dict:
     """
     Returns JSON information about the layout of a simulink object containing elements, ports, connections, etc.
 
@@ -59,43 +40,42 @@ def read_simulink(system: str) -> dict[str, Any]:
         A dictionary of tool execution status and the information about all the elements, their ports, and their connections in the system or subsystem.
     """
 
-    eng = get_state().eng
-    if (issues:= check_file(eng, system, adv = False)):
-        return issues 
+    eng = get_engine()
+
+    check_path(system)
     
     try:
-        eng.load_system(system)
-        content = eng.describe_system(system) 
-        return answer(content)
-    except Exception:
-        return err("Error reading file.")
+        content = await asyncio.to_thread(eng.describe_system, system)
+        return content 
+    except Exception as e:
+        return _raise_error("Error reading file.", e)
     
 
-def clean_simulink(target: Literal["block", "line", "both"], strict: bool = False) -> dict[str, Any]:
+async def clean_simulink_model(arrange: bool = False) -> dict:
     """
-    Cleans up currently open Simulink system or subsystem by deleting unconnected lines and blocks.
-    Recommended to use after modifying models to ensure cleanup of any leftover lines.
+    Cleans up, and optionally improves the layout, of currently open Simulink system/subsystem. 
+    Recommended to use after modifying models to ensure cleanup of any unconnected lines.
 
     Arguments:
-        target: "block", "line" or "both"
-        strict: When true, the function deletes even partially unconnected elements and not only fully unconnected ones.
+        arrange: Whether to improve the layout of blocks after cleanup.
     
     Returns:
-        A dictionary of tool execution status    
+        Number of unconnected lines deleted.   
     """
 
-    eng = get_state().eng
-    mode = "dangling" if strict else "orphaned"
+    eng = get_engine()
+    mode = "dangling"
+    target = "line"
+    arrg = "true" if arrange else "false"
     
     try:
-        content = eng.cleanup(target, mode, nargout = 1)
-    except Exception:
-        return err("Error executing operation.")
-    
-    return answer(content)        
+        content = await asyncio.to_thread(eng.format_simulink_model, target, mode, arrg, nargout=1)
+        return content
+    except Exception as e:
+        return _raise_error("Error executing operation.", e)       
 
   
-def read_code(file: str, open: bool = False) -> dict[str, Any]:
+async def read_matlab_code(file: str, open: bool = False) -> str:
     """
     Returns the code inside a MATLAB script file (or any text file), and optionally opens it in MATLAB window.
 
@@ -107,62 +87,65 @@ def read_code(file: str, open: bool = False) -> dict[str, Any]:
         A dictionary of tool execution status and code inside the script.
     """
 
-    eng = get_state().eng
-    if (issues:= check_file(eng, file)):
-        return issues
+    eng = get_engine()
+
+    check_path(file)
     
     if open:
         try:
-            eng.edit(file, nargout=0)
-        except Exception:
-            return err(f"Unexpected error while opening in desktop.")
+            await asyncio.to_thread(eng.edit, file, 0)
+        except Exception as e:
+            _raise_error(f"Unexpected error while opening in desktop.", e)
 
     try:
-        content = eng.fileread(file, nargout=1) 
+        content = await asyncio.to_thread(eng.fileread, file, 1)
+        return content
     except Exception as e:
-        error_msg = str(e).strip().splitlines()[-1]
-        return err(f"Error reading file: {error_msg}")
-        
-    return answer(content)    
+        _raise_error(f"Unexpected error when reading file.", e)   
 
 
-def save_code(code: str, file: str, overwrite: bool = False) -> dict[str, Any]:
+async def save_matlab_code(code: str, file: str, overwrite: bool = False) -> str:
     """
     Validates and saves MATLAB code to a .m file.
 
     Arguments:
         code: MATLAB code as a string
         file: Path to file (relative to current working directory) with .m extension.
-        overwrite: Whether to overwrite if the file already exists. False unless asked.
+        overwrite: Whether to overwrite if the file already exists.
 
     Returns:
-        A dictionary of tool execution status.
+        Tool execution status.
     """
 
-    eng = get_state().eng
-    if (issues:= check_file(eng, file, True, overwrite=overwrite)):
-        return issues
+    eng = get_engine()
 
-    try: #Path(str(eng.pwd(nargout=1)))
-        path = get_cwd() / Path(file)
+    check_path(file)
+    check_code(code)
+
+    mode = "w" if overwrite else "x"
+
+    try:
+        cwd = await asyncio.to_thread(eng.pwd, nargout=1)
+        path = Path(str(cwd)) / Path(file)
         path.parent.mkdir(parents=True, exist_ok=True) 
-        with path.open("w") as f:
+        with path.open(mode) as f:
             f.write(code)
-    except Exception:
-        return err(f"Error saving the code.")
+    except Exception as e:
+        _raise_error(f"Error saving the code.", e)
     
     try: 
-        issues = eng.validate_code(file)
-    except Exception:
-        return err(f"Error validating the code.") 
+        issues = await asyncio.to_thread(eng.validate_code, file)
+        if issues:
+            return "Code saved but failed validation with errors:\n" + "\n".join(issues)
+        else:
+            return "Code saved and validated successfully."
+    except Exception as e:
+        _raise_error(f"Error validating the code.", e) 
     
-    if issues:
-        return err(f"Code saved but failed validation with errors:\n" + "\n".join(issues))
-    else:
-        return answer(f"Code validated and saved successfully.")
+    
 
 
-def run_code(code: str) -> dict[str, Any]:
+async def run_matlab_code(code: str) -> dict[str, Any]:
     """
     Executes code in MATLAB, and returns command window answerults as a string.
 
@@ -174,34 +157,30 @@ def run_code(code: str) -> dict[str, Any]:
     """
 
     # TODO: Later implement a canvas based editor
-    eng = get_state().eng
-    if (issues := check_code(code)):
-        return issues
+    eng = get_engine()
 
-    def _write_and_run(path: Path) -> str:
+    check_code(code)
+
+    async def _write_and_run(path: Path) -> str:
         with path.open("w") as f:
             f.write(code)
-        return eng.evalc(f"run('{path.name}')", nargout=1)
+        content = await asyncio.to_thread(eng.evalc, f"run('{path.name}')", nargout=1)
+        return content
 
     try: 
-        path = get_cwd() / "canvas.m"
-        answerults = _write_and_run(path)
-        return answer(answerults)
-
-    except PermissionError: # Fallback to temporary file
+        cwd = await asyncio.to_thread(eng.pwd, nargout=1)
+        path = Path(str(cwd)) / "canvas.m"
+        content = asyncio.run(_write_and_run(path))
+        return content 
+    except PermissionError:
         path = Path(tempfile.gettempdir()) / "canvas.m"
-        answerults = _write_and_run(path)
-        return answer(answerults)
-
-    except matlab.engine.MatlabExecutionError as e:
-        error_msg = str(e).strip().splitlines()[-1]
-        return err(f"MATLAB returned error: {error_msg}")
-
-    except Exception:
-        return err("Unexpected error while running MATLAB code.")
+        content = asyncio.run(_write_and_run(path))
+        return content 
+    except Exception as e:
+        _raise_error("Unexpected error while running MATLAB code.", e)
 
 
-def get_variables(variables: list[str], convert = False) -> dict[str, Any]:
+async def get_variables(variables: list[str], convert = False) -> dict:
     """
     Fetches specified variables from MATLAB workspace.
 
@@ -213,28 +192,29 @@ def get_variables(variables: list[str], convert = False) -> dict[str, Any]:
         A dictionary of tool execution status, variables and their values.
     """
 
-    eng = get_state().eng
+    eng = get_engine()
 
-    answerult = {}
+    answer = {}
     for var in variables:
         try:
             # Cannot do "if in eng.workspace" since it is not a native Python dict, rather a MATLAB object with some dict-like properties.
             # eng.exist automatically ensuanswer that the var is a proper variable name, without any code injection which could execute through evalc
-            if eng.exist(var, "var") == 1: 
+            exists = await asyncio.to_thread(eng.exist, var, "var") 
+            if exists == 1: 
                 if convert:
-                    answerult[var] = fetch(eng, var)
+                    answer[var] = fetch(eng, var)
                 else:
-                    answerult[var] = eng.evalc(f"{var}", nargout=1)
+                    answer[var] = await asyncio.to_thread(eng.evalc, f"{var}", nargout=1)
             else:
-                answerult[var] = "Not in workspace"
+                answer[var] = "Not in workspace"
 
         except Exception:
-            return err(f"Error getting variable '{var}'.")
+            _raise_error(f"Error getting variable '{var}'.")
         
-    return answer(answerult)
+    return answer
 
 
-def search_library(query) -> dict[str, Any]:
+def search_library(query) -> dict:
     """
     Searches for a block name in the Simulink block library and returns all matching source paths.
 
@@ -253,11 +233,10 @@ def search_library(query) -> dict[str, Any]:
     try:
         block_names = list(simlib.keys())
         matches = get_close_matches(query, block_names, n=n, cutoff=cutoff)
-        answerults = {name: simlib[name]['paths'] for name in matches}
-        return answer(answerults)
+        return {name: simlib[name]['paths'] for name in matches}
     
     except Exception as e:
-       return err(f"Error searching Simulink library.")
+       _raise_error(f"Error searching Simulink library.")
     
 # TODO remember the newline thing for \n 
 # ['VehicleWithFourSpeedTransmission/Inertia', newline, 'Impeller']

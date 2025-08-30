@@ -39,10 +39,10 @@ def setup_logger(name: str = "matlab_simulink_mcp") -> logging.Logger:
     fh.setLevel(logging.ERROR)
     fh.setFormatter(fmt)
 
-    if not getattr(sys, "frozen", False):
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(fmt)
+    
+    ch = logging.StreamHandler(sys.stderr)
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(fmt)
 
     logger.addHandler(fh)
     logger.addHandler(ch)

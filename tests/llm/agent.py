@@ -1,8 +1,7 @@
 from langgraph.prebuilt import create_react_agent
 
-from tests.integration.helpers.llm.client import llm
-from tests.integration.helpers.llm.tools import tools
-
+from tests.llm.model import model
+from tests.llm.tools import tools
 
 system_prompt = """
 You are an engineering assistant specialized in Simulink and MATLAB. You have access to a set of tools that will allow you to interact with Simulink models and MATLAB scripts. 
@@ -23,5 +22,4 @@ Remember that when using Simulink, you cannot undo your actions. You'll have to 
 
 """
 
-
-agent = create_react_agent(llm, tools = tools, prompt=system_prompt)
+agent = create_react_agent(model = model, tools = tools, prompt=system_prompt)
