@@ -1,15 +1,15 @@
+import asyncio
 import tempfile
 import matlab.engine
 from pathlib import Path
 from typing import Any
 from difflib import get_close_matches
+from fastmcp.exceptions import ToolError
+import traceback
 
-import asyncio
-
+from matlab_simulink_mcp.core.state import get_engine, get_state
 from matlab_simulink_mcp.utils.convert import fetch
 from matlab_simulink_mcp.utils.security import check_path, check_code
-from matlab_simulink_mcp.core.state import get_engine, get_state
-from fastmcp.exceptions import ToolError
 from matlab_simulink_mcp.utils.logger import logger
 
 # TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
@@ -22,11 +22,35 @@ from matlab_simulink_mcp.utils.logger import logger
 
 def _raise_error(msg: str, exception: Exception | None = None):
     if exception:
-        logger.error(f"{msg} Original error: {str(exception)}")
+        tb = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+        logger.error(f"{msg}\nFull traceback:\n{tb}")
         if isinstance(exception, matlab.engine.MatlabExecutionError):
           error_msg = str(exception).strip().splitlines()[-1]
           raise ToolError(f"MATLAB returned error: {error_msg}")    
     raise ToolError(msg)
+
+
+async def access_matlab() -> str:
+    """
+    Finds and connects to a shared MATLAB session if it isn't already connected.
+
+    Returns:
+        Tool execution status.
+    """
+
+    eng = get_state().eng
+    if eng is not None:
+        return f"Already connected to MATLAB session: {get_state().session}"
+    try:
+        await asyncio.to_thread(get_state().connect_matlab)
+        if get_state().eng is not None:
+            return f"Connected to MATLAB session: {get_state().session}"
+        else:
+            return "No shared sessions found. " \
+            "Run matlab.engine.shareEngine in MATLAB to share a session and reconnect tool to reconnect."
+    except Exception as e:
+        _raise_error("Failed to connect to MATLAB.", e)
+
 
 
 async def read_simulink_model(system: str) -> dict:
@@ -43,12 +67,20 @@ async def read_simulink_model(system: str) -> dict:
     eng = get_engine()
 
     check_path(system)
-    
+
+    main_system = system.split("/", 1)[0]
+    if not main_system.endswith(".slx"):
+        main_system += ".slx"
+        
+    if system.endswith(".slx"):
+        system = system[:-4]    
+          
     try:
-        content = await asyncio.to_thread(eng.describe_system, system)
+        await asyncio.to_thread(eng.load_system, main_system, nargout=0)
+        content = await asyncio.to_thread(eng.describe_system, system, nargout=1)
         return content 
     except Exception as e:
-        return _raise_error("Error reading file.", e)
+        _raise_error("Error reading file.", e)
     
 
 async def clean_simulink_model(arrange: bool = False) -> dict:
@@ -72,7 +104,7 @@ async def clean_simulink_model(arrange: bool = False) -> dict:
         content = await asyncio.to_thread(eng.format_simulink_model, target, mode, arrg, nargout=1)
         return content
     except Exception as e:
-        return _raise_error("Error executing operation.", e)       
+        _raise_error("Error executing operation.", e)       
 
   
 async def read_matlab_code(file: str, open: bool = False) -> str:
@@ -93,12 +125,12 @@ async def read_matlab_code(file: str, open: bool = False) -> str:
     
     if open:
         try:
-            await asyncio.to_thread(eng.edit, file, 0)
+            await asyncio.to_thread(eng.edit, file, nargout=0)
         except Exception as e:
             _raise_error(f"Unexpected error while opening in desktop.", e)
 
     try:
-        content = await asyncio.to_thread(eng.fileread, file, 1)
+        content = await asyncio.to_thread(eng.fileread, file, nargout=1)
         return content
     except Exception as e:
         _raise_error(f"Unexpected error when reading file.", e)   
@@ -170,11 +202,11 @@ async def run_matlab_code(code: str) -> dict[str, Any]:
     try: 
         cwd = await asyncio.to_thread(eng.pwd, nargout=1)
         path = Path(str(cwd)) / "canvas.m"
-        content = asyncio.run(_write_and_run(path))
+        content = await _write_and_run(path)
         return content 
     except PermissionError:
         path = Path(tempfile.gettempdir()) / "canvas.m"
-        content = asyncio.run(_write_and_run(path))
+        content = await _write_and_run(path)
         return content 
     except Exception as e:
         _raise_error("Unexpected error while running MATLAB code.", e)
@@ -209,12 +241,13 @@ async def get_variables(variables: list[str], convert = False) -> dict:
                 answer[var] = "Not in workspace"
 
         except Exception:
-            _raise_error(f"Error getting variable '{var}'.")
-        
-    return answer
+            _raise_error(f"Error getting variable '{var}'.") 
+
+    return answer   
+    
 
 
-def search_library(query) -> dict:
+def search_library(query: str) -> dict:
     """
     Searches for a block name in the Simulink block library and returns all matching source paths.
 

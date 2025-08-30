@@ -1,6 +1,7 @@
 import re
 import json
 import sys
+import asyncio
 import matlab.engine 
 
 from pathlib import Path
@@ -8,6 +9,7 @@ from importlib import resources
 from dataclasses import dataclass
 from contextlib import asynccontextmanager
 from fastmcp.server.dependencies import get_context
+from fastmcp.exceptions import ToolError
 
 import matlab_simulink_mcp
 from matlab_simulink_mcp import data
@@ -26,8 +28,6 @@ class MatlabState:
     def load_data(self):
         self.simlib = json.loads((resources.files(data) / "simlib_db.json").read_text())
         self.blacklist = to_regex_list((resources.files(data) / "blacklist.txt").read_text())
-        self.simlib = {}
-        self.blacklist = []
 
     def connect_matlab(self): 
         sessions = matlab.engine.find_matlab() or []
@@ -37,8 +37,9 @@ class MatlabState:
         else: 
             self.session = sessions[0]
             self.eng = matlab.engine.connect_matlab(self.session)
-            self.add_helpers()
-            logger.info(f"Connected to MATLAB session: {self.session}")
+            if self.eng is not None:
+                self.add_helpers()
+                logger.info(f"Connected to MATLAB session: {self.session}")
 
     def add_helpers(self):
         if getattr(sys, "frozen", False):
@@ -50,17 +51,15 @@ class MatlabState:
 
 
 @asynccontextmanager
-async def lifespan():
+async def lifespan(server): # do not remove server argument as it will break stuff
     try:
         state = MatlabState()
         state.load_data()
-        state.connect_matlab()
+        await asyncio.to_thread(state.connect_matlab)
         yield state
-
     except Exception as e:
         logger.error(f"Failed to initialize state: {e}")
         raise
-
 
 def get_state() -> dict:
     return get_context().request_context.lifespan_context
@@ -69,8 +68,10 @@ def get_state() -> dict:
 def get_engine() -> matlab.engine.MatlabEngine:
     eng = get_state().eng
     if eng is None:
-        raise RuntimeError("Could not access MATLAB. Ask user to run matlab.engine.shareEngine"
+        raise ToolError("Could not access MATLAB. Ask user to run matlab.engine.shareEngine"
         " in MATLAB, and then use reconnect tool to reconnect.")
+    return eng 
+    
 
 
 

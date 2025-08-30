@@ -1,5 +1,7 @@
 import re
 from pathlib import Path
+from fastmcp.exceptions import ToolError
+
 from matlab_simulink_mcp.core.state import get_state
 
 
@@ -38,10 +40,10 @@ def check_code(code: str):
     """Checks a given code string for forbidden commands or paths and raises error if any found."""
     issues = check_for_commands(code) or check_for_paths(code)
     if issues:
-        raise PermissionError(issues)
+        raise ToolError(issues)
     
 def check_path(file: str):
     """Checks a given file path for absolute or parent paths and raises error if found."""
     f = Path(file)
     if f.is_absolute() or ".." in f.parts:
-        raise PermissionError("Access to absolute or parent paths is forbidden. Only files on MATLAB path are usable.")
+        raise ToolError("Access to absolute or parent paths is forbidden. Only files on MATLAB path are usable.")
