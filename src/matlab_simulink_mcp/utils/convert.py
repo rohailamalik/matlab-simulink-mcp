@@ -4,35 +4,10 @@
 # This is different from json/string based conversion which returns values as strings. useful for viewing data in a human-readable format, such as by the llm. 
 # So we will use that one, and this could be perhaps useful elsewhere.
 
-import re
 import math
 import numpy as np
 from typing import Any
 import matlab.engine
-
-
-def to_regex(cmd: str) -> re.Pattern:
-    """Converts a MATLAB command to a regex pattern."""
-    if cmd == "!": # This command is only used at the beginning of a line
-        return re.compile(r"^\s*!.*", re.MULTILINE)
-    else:
-        escaped = re.escape(cmd)
-        return re.compile(rf"\b{escaped}\b")
-    
-
-def to_regex_list(content: str) -> list[re.Pattern]:
-    """
-    Converts each line in a text to regex, returning a list.
-    Ignores comments (starting with #) and empty lines.
-    """
-    patterns = []
-    for line in content:
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        pattern = to_regex(stripped)
-        patterns.append(pattern)
-    return patterns
 
 
 def reshape_recursive(flat_list: list[Any], shape: list[int]) -> list[Any]:

@@ -11,8 +11,8 @@ dependencies = [
     "matlabengine>=25.1.2",
     "mcp[cli]>=1.13.1",
     "numpy>=2.3.2",
+    "pillow>=11.3.0",
     "platformdirs>=4.3.8",
-    
 ]
 [tool.setuptools.packages.find]
 where = ["src"]

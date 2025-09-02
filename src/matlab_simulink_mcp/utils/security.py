@@ -1,19 +1,27 @@
 import re
 from pathlib import Path
 from fastmcp.exceptions import ToolError
-
 from matlab_simulink_mcp.core.state import get_state
 
+def strip_matlab_comments(code: str) -> str:
+    lines = []
+    for line in code.splitlines():
+        line = line.split("%", 1)[0]
+        lines.append(line)
+    return "\n".join(lines)
+
+def tokenize(code: str) -> list[str]:
+    return re.findall(r"[A-Za-z_]\w*|[^\s]", code)
 
 def check_for_commands(code: str):
-    """Checks a given code string for forbidden commands and raises error if any found."""
-    clean_code = code.lower()
-
+    clean_code = strip_matlab_comments(code)
+    tokens = tokenize(clean_code)
     blacklist = get_state().blacklist
 
-    for flag in blacklist:
-        if re.search(flag, clean_code):
-            return f"Use of {re.sub(r'^\\b|\\b$', '', flag).replace(r'\.', '.')} command is not allowed."
+    for token in tokens:
+        if token in blacklist:
+            return f"Use of '{token}' command is not allowed."
+    return None
 
 def check_for_paths(code: str):
     """Checks string literals in code for forbidden path usage and raises error if found."""
