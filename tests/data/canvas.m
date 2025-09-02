@@ -1,1 +1,3 @@
-set_param('elecmechsim/Constant', 'Value', '40')
+
+% Find all subsystems in elecmechsim
+find_system('elecmechsim', 'BlockType', 'SubSystem')

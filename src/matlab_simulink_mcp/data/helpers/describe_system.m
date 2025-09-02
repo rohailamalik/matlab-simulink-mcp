@@ -1,11 +1,17 @@
-function system_data = describe_system(system_path)
+function system_data = describe_system(system_path, main_system, open)
 
 % This function returns the information about a system layout as a JSON. 
 % It's still problematic with Simscape because some blocks such as
 % SolverConfiguration and PS-Simulink Convertor are defined internally as
 % SubSystems instead of Simscape blocks.
 
-    blocks = find_system(system_path, 'SearchDepth', 1, 'Type', 'Block');
+load_system(main_system)
+
+if open
+    open_system(system_path);
+end
+
+blocks = find_system(system_path, 'SearchDepth', 1, 'Type', 'Block');
 
     elements = {};
     connections = {};

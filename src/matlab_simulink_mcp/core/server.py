@@ -14,8 +14,6 @@ for name, fn in inspect.getmembers(functions, inspect.isfunction):
 
 # Define server
 mcp = FastMCP("Test_MATLAB", lifespan=lifespan, tools = tools)
-'''
-
 
 # Run server
 def run():
@@ -24,6 +22,4 @@ def run():
     except Exception as e:
         logger.error(f"Issue running server: {e}")
 
-run()
-        
-'''
+ 

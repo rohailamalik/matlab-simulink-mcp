@@ -14,7 +14,6 @@ from fastmcp.exceptions import ToolError
 import matlab_simulink_mcp
 from matlab_simulink_mcp import data
 from matlab_simulink_mcp.utils.logger import logger
-from matlab_simulink_mcp.utils.convert import to_regex_list
 
 
 @dataclass
@@ -27,19 +26,18 @@ class MatlabState:
 
     def load_data(self):
         self.simlib = json.loads((resources.files(data) / "simlib_db.json").read_text())
-        self.blacklist = to_regex_list((resources.files(data) / "blacklist.txt").read_text())
+        self.blacklist = {
+            line.strip().lower()
+            for line in (resources.files(data) / "blacklist.txt").read_text().splitlines()
+            if line.strip() and not line.strip().startswith("#")
+            } 
 
     def connect_matlab(self): 
         sessions = matlab.engine.find_matlab() or []
-        if not sessions:
-            logger.warning("No shared sessions found. Starting server without an engine. " \
-            "Run matlab.engine.shareEngine in MATLAB to share a session and reconnect tool to reconnect.")
-        else: 
+        if sessions:
             self.session = sessions[0]
             self.eng = matlab.engine.connect_matlab(self.session)
-            if self.eng is not None:
-                self.add_helpers()
-                logger.info(f"Connected to MATLAB session: {self.session}")
+            self.add_helpers()
 
     def add_helpers(self):
         if getattr(sys, "frozen", False):
@@ -56,9 +54,14 @@ async def lifespan(server): # do not remove server argument as it will break stu
         state = MatlabState()
         state.load_data()
         await asyncio.to_thread(state.connect_matlab)
+        if state.eng is None:
+            logger.warning("Starting server without an engine. " \
+            "Run matlab.engine.shareEngine in MATLAB to share a session and access_matlab tool to reconnect.")
+        else:
+            logger.info(f"Connected to MATLAB session: {state.session}")
         yield state
-    except Exception as e:
-        logger.error(f"Failed to initialize state: {e}")
+    except Exception:
+        logger.error("Failed to initialize state", exc_info=True)
         raise
 
 def get_state() -> dict:
@@ -68,8 +71,8 @@ def get_state() -> dict:
 def get_engine() -> matlab.engine.MatlabEngine:
     eng = get_state().eng
     if eng is None:
-        raise ToolError("Could not access MATLAB. Ask user to run matlab.engine.shareEngine"
-        " in MATLAB, and then use reconnect tool to reconnect.")
+        raise ToolError("Could not access MATLAB. Run matlab.engine.shareEngine"
+        " in MATLAB, and then use access_matlab tool to reconnect.")
     return eng 
     
 
