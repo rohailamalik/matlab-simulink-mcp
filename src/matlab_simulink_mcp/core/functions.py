@@ -1,22 +1,28 @@
 import asyncio
 import tempfile
+import traceback
+import matlab.engine
 from pathlib import Path
 from difflib import SequenceMatcher
+
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import Image
-import traceback
 
-from matlab_simulink_mcp.core.state import get_engine, get_state
+from matlab_simulink_mcp.core.state import get_state
 from matlab_simulink_mcp.utils.convert import fetch
 from matlab_simulink_mcp.utils.security import check_path, check_code
 from matlab_simulink_mcp.utils.logger import logger
 
-# TODO: Incorporate image reading and multi modality, also needed for simulink broader view using snapshots
-# for graph reading etc it's just an addon, not necessary since the llm can just parse through arrays plotting the graph
-# though it is not much optimal at large lengths etc
 # TODO: figure out some how to undo stuff in simulink
 # TODO: maybe add system prompt as a server resource
 
+
+def _get_engine() -> matlab.engine.MatlabEngine:
+    eng = get_state().eng
+    if eng is None:
+        raise ToolError("Could not access MATLAB. Run matlab.engine.shareEngine"
+        " in MATLAB, and then use access_matlab tool to reconnect.")
+    return eng 
 
 def _raise_error(msg: str, exception: Exception):
     tb = "".join(traceback.format_exception(type(exception), exception, exception.__traceback__))
@@ -24,21 +30,14 @@ def _raise_error(msg: str, exception: Exception):
     logger.error(tb) 
     raise ToolError(f"{msg} {main}")
 
-def _ancestorize(path: str) -> tuple[str, str]:
-    parts = path.split("/", 1)
-    ancestor = parts[0]
-    rest = parts[1] if len(parts) > 1 else ""
-
-    ancestor = ancestor.removesuffix(".slx")
-
-    new_path = ancestor if not rest else f"{ancestor}/{rest}"
-
-    return new_path, ancestor
-
 def _clean_evalc(s: str) -> str:
-    lines = [line.strip() for line in s.splitlines()]
-    lines = [line for line in lines if line]
-    return "\n".join(lines)
+    "\n".join(line.strip() for line in s.splitlines() if line.strip())
+
+def _get_image(path) -> Image:
+    path = Path(str(path))
+    data = path.read_bytes()
+    path.unlink(missing_ok=True)
+    return Image(data=data, format="png")
 
 
 
@@ -46,75 +45,41 @@ async def access_matlab() -> str:
     """Connect to MATLAB."""
 
     try:
-        get_engine()
+        _get_engine()
         return f"Already connected to MATLAB session: {get_state().session}"
     except ToolError:
         try:
             await asyncio.to_thread(get_state().connect_matlab)
-            get_engine()
+            _get_engine()
             return f"Connected to MATLAB session: {get_state().session}"
         except ToolError as e:
             raise
     except Exception as e:
         _raise_error("Failed to connect to MATLAB.", e)
-
-
-async def snapshot_simulink_system(path: str, open: bool = False) -> Image:
-    """
-    Capture a Simulink system/subsystem as a PNG image.
-    Optionally open the object in MATLAB desktop in addition.
-    Recommened for "seeing" the overall layout of a system.
-    """
-
-    eng = get_engine()
-    check_path(path)
-    path, parent = _ancestorize(path)
-
-    try: 
-        ss_path = await asyncio.to_thread(eng.snapshot_system, path, parent, open, nargout=1)
-        ss_path = Path(str(ss_path))
-        data = ss_path.read_bytes()
-        ss_path.unlink(missing_ok=True)
-        return Image(data=data, format="png")
-    
-    except Exception as e:
-        _raise_error("Error taking snapshot.", e)
-
     
 
-async def read_simulink_system(path: str, open: bool = False) -> dict:
+async def read_simulink_system(path: str, detail: bool = False, open: bool = False) -> Image | dict:
     """
-    Return layout information for a Simulink system/subsystem, including elements, ports, and connections. 
+    View a Simulink system/subsystem as either a PNG image or a detailed dictionary (if detail=True).
     Optionally open the object in MATLAB desktop in addition.
-    Only recommended when exact port tags or other details are needed, as the output can be quite verbose.
+    Detail only recommended when exact port tags or other details are needed, as it can be verbose.
     """
 
-    eng = get_engine()
+    eng = _get_engine()
     check_path(path)
-    path, parent = _ancestorize(path)
+    
+    parent, _, rest = path.partition("/")
+    parent = parent.removesuffix(".slx")
+    path = parent if not rest else f"{parent}/{rest}"
           
     try:
-        content = await asyncio.to_thread(eng.describe_system, path, parent, open, nargout=1)
-        return content 
+        if detail:
+            return await asyncio.to_thread(eng.describe_system, path, parent, open, nargout=1)
+        else:
+            ss_path = await asyncio.to_thread(eng.snapshot_system, path, parent, open, nargout=1)
+            return _get_image(ss_path)
     except Exception as e:
-        _raise_error("Error reading file.", e)
-    
-
-async def clean_simulink_system(path: str, arrange: bool = False) -> str: # a bit buggy on matlab side, see last log, maybe incprorate ports too in addition to lines. so delete partial/fully oprhaned lines and fully orphaned blocks
-    """ # maybe merge with a tool for only writing matlab commands for simulink stuff and  just running these commands automatically 
-    # need to figure out how to get current system for that tho, since gcs only works for currently open system
-    Clean up a Simulink system or subsystem by deleting unconnected lines.
-    Optionally also improve block layout arrangement in addition. 
-    """
-
-    eng = get_engine()
-    check_path(path)
-    path, parent = _ancestorize(path)
-    
-    try:
-        return await asyncio.to_thread(eng.format_system, path, parent, arrange, nargout=1)
-    except Exception as e:
-        _raise_error("Error executing operation.", e)       
+        _raise_error("Error reading from Simulink.", e)
 
   
 async def read_matlab_code(path: str, open: bool = False) -> str:
@@ -123,8 +88,7 @@ async def read_matlab_code(path: str, open: bool = False) -> str:
     Optionally open the file in MATLAB desktop in addition.
     """
 
-    eng = get_engine()
-
+    eng = _get_engine()
     check_path(path)
     
     if open:
@@ -146,8 +110,7 @@ async def save_matlab_code(code: str, path: str, overwrite: bool = False) -> str
     Optionally overwrite if the file already exists.
     """
 
-    eng = get_engine()
-
+    eng = _get_engine()
     check_path(path)
     check_code(code)
 
@@ -170,47 +133,53 @@ async def save_matlab_code(code: str, path: str, overwrite: bool = False) -> str
             return "Code saved and validated successfully."
     except Exception as e:
         _raise_error(f"Error validating the code.", e) 
-    
-    
 
 
-async def run_matlab_code(code: str) -> str:
+async def run_matlab_code(code: str, get_images: bool = False) -> tuple[str, *tuple[Image, ...]]:
     """
-    Execute MATLAB code and return command window output as a string.
+    Execute MATLAB code and return command window output as a string and images (if asked).
     Interact programatically with Simulink if the action is not covered by a tool.
     """
 
     # TODO: Later implement a canvas based editor
-    eng = get_engine()
-
+    eng = _get_engine()
     check_code(code)
 
-    async def _write_and_run(abs_path: Path) -> str:
-        with abs_path.open("w") as f:
-            f.write(code)
-        content = await asyncio.to_thread(eng.evalc, f"run('{abs_path}')", nargout=1)
-        return _clean_evalc(content)
+    imgs: list[Image] = []
 
     try: 
-        cwd = await asyncio.to_thread(eng.pwd, nargout=1)
-        abs_path = Path(str(cwd)) / "canvas.m"
-        return await _write_and_run(abs_path)
-    except PermissionError:
-        abs_path = Path(tempfile.gettempdir()) / "canvas.m"
-        return await _write_and_run(abs_path)
+        if get_images:
+            await asyncio.to_thread(eng.close, 'all', nargout=0)
+        with tempfile.NamedTemporaryFile("w", suffix=".m", delete=True) as f:
+            f.write(code)
+            f.flush()
+            abs_path = Path(f.name)
+            text = _clean_evalc(await asyncio.to_thread(eng.evalc, f"run('{abs_path}')", nargout=1))
+        await asyncio.to_thread(eng.format_system, nargout=0)
     except Exception as e:
         _raise_error("Unexpected error while running MATLAB code.", e)
+    
+    if get_images:
+        try:
+            img_paths = await asyncio.to_thread(eng.get_images, nargout=1)
+            imgs = [_get_image(p) for p in img_paths]
+        except Exception as e:
+            _raise_error("Error fetching images from MATLAB.", e)
+    
+    return (text, *imgs) 
+            
+    
 
-
+'''
 async def get_variables(variables: list[str], convert: bool = False) -> dict:
     """
     Fetch variables from the MATLAB workspace.
     Optionally return converted Python types instead of string representations.
     """
 
-    eng = get_engine()
-
+    eng = _get_engine()
     answer = {}
+
     for var in variables:
         try:
             # Cannot do "if in eng.workspace" since it is not a native Python dict, rather a MATLAB object with some dict-like properties.
@@ -229,7 +198,7 @@ async def get_variables(variables: list[str], convert: bool = False) -> dict:
             _raise_error(f"Error getting variable '{var}'.") 
 
     return answer   
-    
+'''
 
 
 def search_library(query: str) -> list:

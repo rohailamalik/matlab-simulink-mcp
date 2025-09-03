@@ -4,6 +4,7 @@ from fastmcp.exceptions import ToolError
 from matlab_simulink_mcp.core.state import get_state
 
 def strip_matlab_comments(code: str) -> str:
+    """Removes comments from MATLAB code which could then be checked."""
     lines = []
     for line in code.splitlines():
         line = line.split("%", 1)[0]
@@ -11,9 +12,11 @@ def strip_matlab_comments(code: str) -> str:
     return "\n".join(lines)
 
 def tokenize(code: str) -> list[str]:
+    """Tokenizes MATLAB code into commands and identifiers."""
     return re.findall(r"[A-Za-z_]\w*|[^\s]", code)
 
 def check_for_commands(code: str):
+    """Checks code for forbidden commands and raises error if found."""
     clean_code = strip_matlab_comments(code)
     tokens = tokenize(clean_code)
     blacklist = get_state().blacklist
@@ -45,7 +48,7 @@ def check_for_paths(code: str):
             return "Paths with * or ? are not allowed."
 
 def check_code(code: str):
-    """Checks a given code string for forbidden commands or paths and raises error if any found."""
+    """Checks a given code for forbidden commands or paths and raises error if any found."""
     issues = check_for_commands(code) or check_for_paths(code)
     if issues:
         raise ToolError(issues)
