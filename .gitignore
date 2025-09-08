@@ -17,3 +17,6 @@ slprj/
 # Logs
 *.log
 
+# Testing
+tests/
+

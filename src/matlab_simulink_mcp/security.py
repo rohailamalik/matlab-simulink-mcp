@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from fastmcp.exceptions import ToolError
-from matlab_simulink_mcp.core.state import get_state
+from matlab_simulink_mcp.state import get_state
 
 def strip_matlab_comments(code: str) -> str:
     """Removes comments from MATLAB code which could then be checked."""
@@ -40,10 +40,8 @@ def check_for_paths(code: str):
 
         if path.is_absolute():
             return "Absolute paths are not allowed. Only files on MATLAB path are accessible."
-
         if ".." in path.parts:
             return "Paths with .. are not allowed. Only files on MATLAB path are accessible."
-
         if "*" in path_str or "?" in path_str:
             return "Paths with * or ? are not allowed."
 
