@@ -1,9 +1,9 @@
 import inspect
 from fastmcp import FastMCP
 
-from matlab_simulink_mcp.core import functions
-from matlab_simulink_mcp.core.state import lifespan
-from matlab_simulink_mcp.utils.logger import logger
+import matlab_simulink_mcp.state as state
+from matlab_simulink_mcp.state import lifespan, logger
+from matlab_simulink_mcp import functions
 
 
 # Make functions into tools
@@ -16,10 +16,11 @@ for name, fn in inspect.getmembers(functions, inspect.isfunction):
 mcp = FastMCP("MATLAB_Simulink_MCP", lifespan=lifespan, tools = tools)
 
 # Run server
-def run():
+def run(console: bool = False):
     try:
+        state.console = console
         mcp.run(transport="stdio")
-    except Exception as e:
-        logger.error(f"Issue running server: {e}")
+    except Exception:
+        logger.exception("Issue running server.")
 
  

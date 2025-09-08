@@ -15,8 +15,7 @@ for i = 1:numel(systems)
 end
 
 %hLines = find_system(system_path, 'SearchDepth', 1, 'FindAll', 'on', 'Type', 'Line', 'Connected', 'off');
-hLines = find_system(system_path, 'FindAll', 'on', 'Type', 'Line', 'Connected', 'off');
-delete_line(hLines);
+%delete_line(hLines);
 %result = "Success";
 
 

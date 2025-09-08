@@ -1,19 +1,40 @@
-import re
+import os
 import json
 import sys
 import asyncio
-import matlab.engine 
 
 from pathlib import Path
 from importlib import resources
+from dotenv import load_dotenv
 from dataclasses import dataclass
 from contextlib import asynccontextmanager
 from fastmcp.server.dependencies import get_context
 
 import matlab_simulink_mcp
+from matlab_simulink_mcp.logutils import get_full_path, LoggingManager
 from matlab_simulink_mcp import data
-from matlab_simulink_mcp.utils.logger import logger
 
+console = False
+
+load_dotenv()
+
+log_manager = LoggingManager(
+    name = matlab_simulink_mcp.__name__, 
+    log_dir = get_full_path(matlab_simulink_mcp, os.getenv("LOG_DIR"))
+    )
+
+logger = log_manager.logger
+log_manager.open_console()
+
+try:
+    import matlab.engine
+except ImportError:
+    logger.error(
+        "MATLAB Engine API is not installed. "
+        "Please install the engine version matching your MATLAB release "
+        "(see https://pypi.org/project/matlabengine/)."
+        )
+    sys.exit(1)
 
 @dataclass
 class MatlabState:
@@ -21,7 +42,7 @@ class MatlabState:
     eng: matlab.engine.MatlabEngine | None = None
     helpers: Path | None = None
     simlib: dict | None = None
-    blacklist: list[re.Pattern] | None = None
+    blacklist: set[str] | None = None
 
     def initialize(self):
         self.load_data()
@@ -40,16 +61,15 @@ class MatlabState:
         if sessions:
             self.session = sessions[0]
             self.eng = matlab.engine.connect_matlab(self.session)
-            self.add_helpers()
+            self.helpers = self._add_helpers()
 
-    def add_helpers(self):
+    def _add_helpers(self):
         if getattr(sys, "frozen", False):
             pth = Path(sys._MEIPASS) / "matlab_simulink_mcp" / "data/helpers"
         else:
-            pth = Path(matlab_simulink_mcp.__file__).resolve().parent / "data/helpers"
+            pth = get_full_path(matlab_simulink_mcp, "data/helpers")
         self.eng.addpath(str(pth), nargout=0)
-        self.helpers = Path(pth)
-
+        return Path(pth)
 
 @asynccontextmanager
 async def lifespan(server): # do not remove server argument as it will break stuff
@@ -60,10 +80,13 @@ async def lifespan(server): # do not remove server argument as it will break stu
             logger.warning("Starting server without an engine. " \
             "Run matlab.engine.shareEngine in MATLAB to share a session and access_matlab tool to reconnect.")
         else:
-            logger.info(f"Connected to MATLAB session: {state.session}")
+            logger.info(f"Connected to MATLAB session: {state.session}.")
+            logger.info(f"Logging to {log_manager.log_file_path}.")
+        if not console:
+            log_manager.close_console()
         yield state
     except Exception:
-        logger.error("Failed to initialize state", exc_info=True)
+        logger.exception("Failed to initialize state.")
         raise
 
 def get_state() -> dict:
