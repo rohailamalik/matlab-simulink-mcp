@@ -1,3 +1,4 @@
+import sys
 import inspect
 from fastmcp import FastMCP
 
@@ -7,20 +8,27 @@ from matlab_simulink_mcp import functions
 
 
 # Make functions into tools
-tools = []
-for name, fn in inspect.getmembers(functions, inspect.isfunction):
-    if fn.__module__ == functions.__name__ and not name.startswith("_"):
-        tools.append(fn)
+def collect_tools():
+    tools = []
+    for name, fn in inspect.getmembers(functions, inspect.isfunction):
+        if fn.__module__ == functions.__name__ and not name.startswith("_"):
+            tools.append(fn)
+    return tools
 
 # Define server
-mcp = FastMCP("MATLAB_Simulink_MCP", lifespan=lifespan, tools = tools)
+mcp = FastMCP(
+    name="MATLAB_Simulink_MCP", 
+    lifespan=lifespan, 
+    tools=collect_tools()
+    )
 
 # Run server
-def run(console: bool = False):
+def run(console: bool=False):
     try:
         state.console = console
         mcp.run(transport="stdio")
-    except Exception:
-        logger.exception("Issue running server.")
+    except Exception as e:
+        logger.exception(f"Failed to start the server: {str(e)}")
+        sys.exit(1)
 
  
