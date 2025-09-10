@@ -7,8 +7,8 @@ from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import Image
 from fastmcp.server.dependencies import get_context
 
-from matlab_simulink_mcp.config import logger
-from matlab_simulink_mcp.core.security import check_path, check_code
+from matlab_simulink_mcp.state import logger
+from matlab_simulink_mcp.security import check_path, check_code
 
 # TODO: figure out how to undo stuff in simulink
 # TODO: maybe add system prompt as a server resource

@@ -1,5 +1,5 @@
 import argparse
-import matlab_simulink_mcp.core.server as server
+import matlab_simulink_mcp.server as server
 
 def main():
     parser = argparse.ArgumentParser()
