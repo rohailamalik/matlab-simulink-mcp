@@ -1,7 +1,5 @@
 import asyncio
 import tempfile
-import traceback
-import matlab.engine
 from pathlib import Path
 from difflib import SequenceMatcher
 
@@ -16,7 +14,7 @@ from matlab_simulink_mcp.security import check_path, check_code
 # TODO: Later implement a canvas based editor
 
 
-def _get_engine() -> matlab.engine.MatlabEngine:
+def _get_engine():
     eng = get_state().eng
     if eng is None:
         raise ToolError("Could not access MATLAB. Run matlab.engine.shareEngine"
@@ -54,7 +52,7 @@ async def access_matlab() -> str:
         _raise_error(e)
     
 
-async def read_simulink_system(path: str, detail: bool = False, open: bool = False) -> Image | dict:
+async def read_simulink_system(path: str, detail: bool=False, open: bool=False) -> Image | dict:
     """
     View a Simulink system/subsystem as either a PNG image or a detailed dictionary (if detail=True).
     Optionally open the object in MATLAB desktop.
@@ -78,7 +76,7 @@ async def read_simulink_system(path: str, detail: bool = False, open: bool = Fal
         _raise_error(e)
 
   
-async def read_matlab_code(path: str, open: bool = False) -> str:
+async def read_matlab_code(path: str, open: bool=False) -> str:
     """
     Read the contents of a MATLAB script (.m) or text file.
     Optionally open the file in MATLAB desktop.
@@ -95,7 +93,7 @@ async def read_matlab_code(path: str, open: bool = False) -> str:
         _raise_error(e)   
 
 
-async def save_matlab_code(code: str, path: str, overwrite: bool = False) -> str:
+async def save_matlab_code(code: str, path: str, overwrite: bool=False) -> str:
     """
     Validate and save MATLAB code to a .m file.
     Optionally overwrite if the file already exists.
@@ -124,7 +122,7 @@ async def save_matlab_code(code: str, path: str, overwrite: bool = False) -> str
         _raise_error(e) 
 
 
-async def run_matlab_code(code: str, get_images: bool = False) -> tuple[str, *tuple[Image, ...]]:
+async def run_matlab_code(code: str, get_images: bool=False) -> tuple[str, *tuple[Image, ...]]:
     """
     Execute MATLAB code and return command window output as a string and images (if asked).
     Interact programatically with Simulink if the action is not covered by a tool.
