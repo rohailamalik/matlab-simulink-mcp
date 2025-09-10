@@ -3,6 +3,7 @@ import logging
 import platform
 import subprocess
 import shutil
+import time
 
 from pathlib import Path
 from platformdirs import user_log_dir
@@ -55,21 +56,30 @@ def create_logger(name: str, log_file: Path) -> logging.Logger:
 
 class TrailingConsole:
     def __init__(self, log_file: Path):
-        self.log_file = log_file
+        self.log_file = str(log_file)
+        self.viewer_process = None
 
     def open(self):
         """Open a console window that tails the log file."""
 
+        if self.viewer_process and self.viewer_process.poll() is None:
+            return  # already open
+
         system = platform.system()
 
         if system == "Windows":
+            cmd = [
+                "powershell",
+                "-NoExit",
+                "-Command",
+                f'Get-Content -Path "{self.log_file}" -Wait -Tail 0'
+            ]
             self.viewer_process = subprocess.Popen(
-                [
-                    "powershell", "-NoExit", "-Command",
-                    f"Get-Content -Path {self.log_file} -Wait -Tail 0"
-                ],
-                creationflags=subprocess.CREATE_NEW_CONSOLE
+                cmd, creationflags=subprocess.CREATE_NEW_CONSOLE
             )
+
+            if self.viewer_process.poll() is not None:
+                raise RuntimeError("Failed to launch trailing console process")
 
         elif system == "Linux":
             candidates = [
@@ -82,7 +92,6 @@ class TrailingConsole:
             terminal = next((t for t in candidates if shutil.which(t)), None)
 
             if terminal is None:
-                self.logger.error("No supported terminal emulator found for log viewer.")
                 return
 
             self.viewer_process = subprocess.Popen([terminal, "-e", f"tail -n 0 -f '{self.log_file}'"])

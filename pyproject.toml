@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "matlab_simulink_mcp"
 version = "0.1.0"
-description = "An MCP server for allowing LLMs to work with MATLAB and Simulink"
+description = "An MCP server for allowing LLMs to interact with MATLAB and Simulink"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 dependencies = [

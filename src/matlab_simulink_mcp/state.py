@@ -1,15 +1,32 @@
+import os
+import types
 import json
 import sys
 
 from pathlib import Path
 from importlib import resources
 from dataclasses import dataclass
+from dotenv import load_dotenv
 
 import matlab_simulink_mcp
 from matlab_simulink_mcp import data
-from matlab_simulink_mcp.config import logger, log_file, matlab_dir
-from matlab_simulink_mcp.utils.paths import get_full_path
-from matlab_simulink_mcp.engine.installer import import_engine, install_engine
+from matlab_simulink_mcp.log_utils import create_log_file, create_logger, create_console 
+
+
+def get_full_path(pkg: types.ModuleType, path: str | Path) -> Path:
+    if path is None:
+        return None
+    path = Path(path)
+    if path.is_absolute():
+        return path
+    return (Path(pkg.__file__).resolve().parent / path).resolve()
+
+load_dotenv()
+log_dir = get_full_path(matlab_simulink_mcp, os.getenv("LOG_DIR"))
+
+log_file = create_log_file(filename=matlab_simulink_mcp.__name__, dir=log_dir)
+log_console = create_console(log_file=log_file)
+logger = create_logger(name=matlab_simulink_mcp.__name__, log_file=log_file)
 
 
 @dataclass
@@ -21,7 +38,6 @@ class EngineState:
     blacklist: set[str] | None = None
 
     def initialize(self):
-        self.ensure_engine(matlab_dir)
         self.load_data()
         self.connect_engine()
         if self.eng is None:
@@ -38,9 +54,12 @@ class EngineState:
             for line in (resources.files(data) / "blacklist.txt").read_text().splitlines()
             if line.strip() and not line.strip().startswith("#")
             } 
-
+    
     def connect_engine(self):
-        import matlab.engine 
+        try:
+            import matlab.engine 
+        except ImportError:
+            raise ImportError("MATLAB Engine for Python package not found.")
         sessions = matlab.engine.find_matlab() or []
         if sessions:
             self.session = sessions[0]
@@ -55,18 +74,7 @@ class EngineState:
         self.eng.addpath(str(pth), nargout=0)
         return Path(pth)
     
-    def ensure_engine(self, matlab_dir):
-        try:
-            if not import_engine():
-                logger.info("Could not find MATLAB engine package in the current envinronment.")
-                install_engine(matlab_dir)
-                if not import_engine():
-                    raise RuntimeError("MATLAB Engine package not available even after attempted install.")
-                logger.info("MATLAB engine package successfully installed.")
-        except Exception:
-            logger.error("You can try installing MATLAB engine package manually. See https://pypi.org/project/matlabengine/ for details.")
-            raise 
-
+    
 
 
 
