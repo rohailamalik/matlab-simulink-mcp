@@ -1,7 +1,6 @@
 import re
 from pathlib import Path
 from fastmcp.exceptions import ToolError
-from matlab_simulink_mcp.state import get_state
 
 def strip_matlab_comments(code: str) -> str:
     """Removes comments from MATLAB code which could then be checked."""
@@ -15,11 +14,10 @@ def tokenize(code: str) -> list[str]:
     """Tokenizes MATLAB code into commands and identifiers."""
     return re.findall(r"[A-Za-z_]\w*|[^\s]", code)
 
-def check_for_commands(code: str):
+def check_for_commands(code: str, blacklist: set[str]):
     """Checks code for forbidden commands and raises error if found."""
     clean_code = strip_matlab_comments(code)
     tokens = tokenize(clean_code)
-    blacklist = get_state().blacklist
 
     for token in tokens:
         if token in blacklist:
@@ -45,9 +43,9 @@ def check_for_paths(code: str):
         if "*" in path_str or "?" in path_str:
             return "Paths with * or ? are not allowed."
 
-def check_code(code: str):
+def check_code(code: str, blacklist: set[str]):
     """Checks a given code for forbidden commands or paths and raises error if any found."""
-    issues = check_for_commands(code) or check_for_paths(code)
+    issues = check_for_commands(code, blacklist) or check_for_paths(code)
     if issues:
         raise ToolError(issues)
     

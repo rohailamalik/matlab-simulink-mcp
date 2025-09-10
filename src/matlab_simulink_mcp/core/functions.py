@@ -5,17 +5,20 @@ from difflib import SequenceMatcher
 
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import Image
+from fastmcp.server.dependencies import get_context
 
-from matlab_simulink_mcp.state import get_state, logger
-from matlab_simulink_mcp.security import check_path, check_code
+from matlab_simulink_mcp.config import logger
+from matlab_simulink_mcp.core.security import check_path, check_code
 
 # TODO: figure out how to undo stuff in simulink
 # TODO: maybe add system prompt as a server resource
 # TODO: Later implement a canvas based editor
 
+def _get_state() -> dict:
+    return get_context().request_context.lifespan_context
 
 def _get_engine():
-    eng = get_state().eng
+    eng = _get_state().eng
     if eng is None:
         raise ToolError("Could not access MATLAB. Run matlab.engine.shareEngine"
         " in MATLAB, and then use access_matlab tool to reconnect.")
@@ -40,12 +43,12 @@ async def access_matlab() -> str:
 
     try:
         _get_engine()
-        return f"Already connected to MATLAB session: {get_state().session}"
+        return f"Already connected to MATLAB session: {_get_state().session}"
     except ToolError:
         try:
-            await asyncio.to_thread(get_state().connect_matlab)
+            await asyncio.to_thread(_get_state().connect_engine)
             _get_engine()
-            return f"Connected to MATLAB session: {get_state().session}"
+            return f"Connected to MATLAB session: {_get_state().session}"
         except ToolError as e:
             raise
     except Exception as e:
@@ -101,7 +104,8 @@ async def save_matlab_code(code: str, path: str, overwrite: bool=False) -> str:
 
     eng = _get_engine()
     check_path(path)
-    check_code(code)
+    blacklist = _get_state().blacklist
+    check_code(code, blacklist)
 
     mode = "w" if overwrite else "x"
 
@@ -129,7 +133,8 @@ async def run_matlab_code(code: str, get_images: bool=False) -> tuple[str, *tupl
     """
 
     eng = _get_engine()
-    check_code(code)
+    blacklist = _get_state().blacklist
+    check_code(code, blacklist)
 
     imgs: list[Image] = []
 
@@ -172,7 +177,7 @@ def search_library(query: str) -> list:
     """
 
     try: 
-        simlib = get_state().simlib
+        simlib = _get_state().simlib
         candidates = [(name, path) for name, entry in simlib.items() for path in entry["paths"]]
         ranked = sorted(
             candidates,

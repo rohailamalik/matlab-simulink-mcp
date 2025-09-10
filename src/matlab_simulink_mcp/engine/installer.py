@@ -4,6 +4,7 @@ import platform
 import time
 import subprocess
 from pathlib import Path
+from matlab_simulink_mcp.config import logger
 
 system = platform.system()
 
@@ -16,7 +17,9 @@ def import_engine():
         return False
 
 def get_engine_setup_path(matlab_dir: Path | None) -> Path:
+    
     if not matlab_dir:
+        logger.info("MATLAB installation directory not specified. Searching in default directories.")
         if system == "Windows":
             parent = Path("C:/Program Files/MATLAB")
         elif system == "Linux":
@@ -31,8 +34,9 @@ def get_engine_setup_path(matlab_dir: Path | None) -> Path:
             raise FileNotFoundError(f"No valid MATLAB installations found in {parent}")
 
         matlab_dir = sorted(candidates)[-1] # find the latest version
-        if not matlab_dir.exists():
-            raise FileNotFoundError(f"MATLAB installation not found in {matlab_dir}. Please set MATLAB_DIR environment variable to your MATLAB installation directory.")
+        
+    if not matlab_dir.exists():
+        raise FileNotFoundError(f"MATLAB installation not found in {matlab_dir}. Please set MATLAB_DIR environment variable to your MATLAB installation directory.")
     
     setup_path = matlab_dir / "extern/engines/python/setup.py"
     if not setup_path.exists():
@@ -40,22 +44,26 @@ def get_engine_setup_path(matlab_dir: Path | None) -> Path:
     
     return setup_path.parent
     
-    
+
+from matlab_simulink_mcp.engine import win_elevate
+win_install_log = "install.log"
+
 def install_engine_win(setup_path: Path):
-    installer = Path(__file__).with_name("win_installer.py").resolve()
-    args = subprocess.list2cmdline([str(installer), str(setup_path)])
+    script = Path(win_elevate.__file__).resolve()
+    status = script.with_name(win_install_log)
+
+    args = subprocess.list2cmdline([str(script), str(setup_path)])
     ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, args, None, 1)
     if ret <= 32:
         raise PermissionError("Installation failed due to permission issues or some other error.")
     
-    status = installer.with_name("install.log")
-    for _ in range(30):
+    for _ in range(15):
         if status.exists():
             lines = open(status).read().strip().splitlines()
             if lines:
                 last = lines[-1]
                 if last == "0":
-                    #status.unlink() had to comment because claude sends request twice in init so it couldnt delete this
+                    #status.unlink() # had to comment because claude sends request twice in init so it couldnt delete this
                     return
                 elif last.isdigit():
                     e = "\n".join(lines[:-1])
@@ -66,27 +74,29 @@ def install_engine_win(setup_path: Path):
 
 
 def install_engine_mac_linux(setup_path: Path):
-    try:
-        subprocess.run(["sudo", sys.executable, "setup.py", "install"],
-            cwd=setup_path,
-            check=True)
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Failed to install MATLAB engine. \n: {e}")
+    subprocess.run(
+        ["sudo", sys.executable, "setup.py", "install"],
+        cwd=setup_path,
+        check=True)
 
 
 def install_engine(matlab_dir: Path | None):
-    try: 
-        setup_path = get_engine_setup_path(matlab_dir)
+    setup_path = get_engine_setup_path(matlab_dir)
 
-        time.sleep(2) # Wait for a while so that user sees that they need to grant permission.
+    logger.info(f"Installing MATLAB engine package from {setup_path}")
+    logger.info(f"Waiting for access permissions by the user.")
 
-        if system == "Windows":
-            install_engine_win(setup_path)
-        elif system in ["Linux", "Darwin"]:
-            install_engine_mac_linux(setup_path)
-        else:
-            raise OSError(f"Unsupported OS: {system}.")
+    time.sleep(2) # Wait for a while so that user sees that they need to grant permission.
+
+    if system == "Windows":
+        install_engine_win(setup_path)
+    elif system in ["Linux", "Darwin"]:
+        install_engine_mac_linux(setup_path)
+    else:
+        raise OSError(f"Unsupported OS: {system}.")
     
-    except Exception as e:
-        raise e
+    time.sleep(2) # ensuring that installed package is now recognized
 
+
+
+                
