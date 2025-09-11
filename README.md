@@ -39,6 +39,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     uv venv --python 3.12           # match Python to your MATLAB-supported version
     source .venv/Scripts/activate   # on macOS/Linux: source .venv/bin/activate
     uv sync
+    ```
 
     Without uv:
 
@@ -47,6 +48,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     source .venv/bin/activate
     pip install -r requirements.txt
     pip install .
+    ```
 
 3. Alternatively, skip step 1, create virtual environment and install directly via PyPI:
 
@@ -54,6 +56,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     uv pip install matlab-simulink-mcp
     # or
     pip install matlab-simulink-mcp
+    ```
 
 4. On first run, if the MATLAB Engine is not installed, the server will open a console window and guide you through installation.
 
@@ -102,12 +105,13 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
 FastMCP 2.0 includes an MCP Inspector for manual testing without an LLM client. This launches a UI to send dummy requests directly to the server.
 
 ```bash
-    cd scripts
-    fastmcp dev debugger.py
+cd scripts
+fastmcp dev debugger.py
+```
 
 ## Repository Structure
 
-```
+```txt
 
 matlab-simulink-mcp/
 ├─ scripts
@@ -129,6 +133,8 @@ matlab-simulink-mcp/
 ├─ requirements.txt         # Package dependencies for pip
 ├─ uv.lock                  # Package dependencies for uv
 └─ README.md                # This file
+
+```
 
 ## FAQ
 
