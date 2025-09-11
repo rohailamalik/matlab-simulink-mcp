@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "matlab-simulink-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "An MCP server for allowing LLMs to interact with MATLAB and Simulink"
 authors = [
   { name = "Rohail"}

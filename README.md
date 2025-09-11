@@ -44,8 +44,8 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     Without uv, first download a Python version manually, then run:
 
     ```bash
-    python3.12 -m venv .venv
-    source .venv/bin/activate
+    python3.12 -m venv .venv # match Python to your MATLAB-supported version
+    source .venv/Scripts/activate   # on macOS/Linux: source .venv/bin/activate
     pip install -r requirements.txt
     pip install .
     ```
