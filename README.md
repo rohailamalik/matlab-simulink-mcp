@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/matlab-simulink-mcp.svg)](https://pypi.org/project/matlab-simulink-mcp/)
 [![Python versions](https://img.shields.io/pypi/pyversions/matlab-simulink-mcp.svg)](https://pypi.org/project/matlab-simulink-mcp/)
 
-This [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) server allows MCP clients (such as Claude Desktop or other LLM-based agents) to interact with **MATLAB** and **Simulink** in real time. It runs locally and is built on top of the [FastMCP 2.0](https://gofastmcp.com/getting-started/welcome) library.
+This Model Context Protocol (MCP) server allows MCP clients (such as Claude Desktop or other LLM-based agents) to interact with **MATLAB** and **Simulink** in real time. It runs locally, is built on top of the [FastMCP 2.0](https://gofastmcp.com/getting-started/welcome) library, and uses MATLAB Engine for Python API to communicate with MATLAB and Simulink.
 
 ## Features
 
@@ -33,7 +33,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
    git clone https://github.com/rohailamalik/matlab-simulink-mcp
    cd matlab-simulink-mcp
 
-2. Create a Python virtual environment (recommended: uv):
+2. Create a Python virtual environment ([uv](https://pypi.org/project/uv/0.1.32/) is recommended):
 
     ```bash
     uv venv --python 3.12           # match Python to your MATLAB-supported version
@@ -41,7 +41,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     uv sync
     ```
 
-    Without uv:
+    Without uv, first download a Python version manually, then run:
 
     ```bash
     python3.12 -m venv .venv
@@ -58,7 +58,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     pip install matlab-simulink-mcp
     ```
 
-4. On first run, if the MATLAB Engine is not installed, the server will open a console window and guide you through installation.
+4. On the first run, if the MATLAB Engine is not installed, the server will open a console window and guide you through installation.
 
     - This requires admin permission and the server will request for it.
     - If you prefer to install manually, install a [matching PyPi version](https://pypi.org/project/matlabengine/#history) or from your [MATLAB installation](https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html).
@@ -75,7 +75,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     {
     "mcpServers": {
         "MATLAB_Simulink_MCP": {
-            "command": "C:/Data/Research/Doctoral/src/matlab-simulink-mcp/.venv/Scripts/python.exe",
+            "command": "absolute-path-to/.venv/Scripts/python.exe", // absolute path to your venv/global environment executable
             "args": ["-m", "matlab_simulink_mcp"]
             }
         }
@@ -92,7 +92,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
 
 5. On first launch, the server may open multiple consoles to install MATLAB Engine. Interact with one, complete installation, then restart Claude if needed.
 
-6. Check running status in Settings → Developer, or click the equalizer button in the chat box.
+6. Check running status in Settings → Developer, or click the equalizer button in Claude's chat box.
 
 7. The server logs outputs and errors to both Claude's and its own log file. To keep a log file tracking console open, add `--console` in Claude config args.
 
@@ -102,7 +102,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
 
 ## Debugging
 
-FastMCP 2.0 includes an MCP Inspector for manual testing without an LLM client. This launches a UI to send dummy requests directly to the server.
+FastMCP 2.0 includes an MCP Inspector for manual testing without an LLM client. It launches a UI to send dummy requests directly to the server.
 
 ```bash
 cd scripts
@@ -127,7 +127,7 @@ matlab-simulink-mcp/
 │  ├─ security.py           # Safety layer for code execution
 │  ├─ server.py             # Main server script
 │  ├─ state.py              # Server lifespan objects (logger, engine)
-│  ├─ **main**.py           # Main entry point
+│  ├─ __main__.py           # Main entry point
 ├─ .env                     # Optional config (e.g. LOG_DIR)
 ├─ pyproject.toml           # Project metadata and dependencies
 ├─ requirements.txt         # Package dependencies for pip
@@ -138,17 +138,17 @@ matlab-simulink-mcp/
 
 ## FAQ
 
-Q: Which Python version should I install?
+- Q: Which Python version should I install?
+  
+- A: Match it to the highest Python version supported by your MATLAB release (see MathWorks docs).
 
-A: Match it to the highest Python version supported by your MATLAB release (see MathWorks docs).
+- Q: The console disappears too quickly!
 
-Q: The console disappears too quickly!
+- A: Add `--console` in your Claude config args to keep the server console open.
 
-A: Add `--console` in your Claude config args to keep the server console open.
+- Q: Multiple installer consoles opened on first run.
 
-Q: Multiple installer consoles opened on first run.
-
-A: This is expected if Claude sends multiple startup requests. Complete one installation, then restart Claude Desktop.
+- A: This is expected if Claude sends multiple startup requests. Complete one installation, then restart Claude Desktop.
 
 ## Contributing
 
