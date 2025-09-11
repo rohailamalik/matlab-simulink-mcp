@@ -1,7 +1,4 @@
-import os
-import types
-import json
-import sys
+import os, types, json, sys
 
 from pathlib import Path
 from importlib import resources
@@ -31,6 +28,7 @@ logger = create_logger(name=matlab_simulink_mcp.__name__, log_file=log_file)
 
 @dataclass
 class EngineState:
+    installed: int = 0
     session: str | None = None
     eng = None # Don't put typehint here since engine may not be installed
     helpers: Path | None = None
@@ -38,14 +36,18 @@ class EngineState:
     blacklist: set[str] | None = None
 
     def initialize(self):
-        self.load_data()
-        self.connect_engine()
-        if self.eng is None:
-            logger.warning("Starting server without an engine. " \
-            "Run matlab.engine.shareEngine in MATLAB to share a session and access_matlab tool to reconnect.")
-        else:
-            logger.info(f"Connected to MATLAB session: {self.session}.")
-            logger.info(f"Logging to: {log_file}")
+        self.ensure_engine()
+    
+        if self.installed == 1:
+            self.connect_engine()
+            self.load_data()
+
+            if self.eng is None:
+                logger.warning("Starting server without an engine. " \
+                "Run matlab.engine.shareEngine in MATLAB to share a session and access_matlab tool to reconnect.")
+            else:
+                logger.info(f"Connected to MATLAB session: {self.session}.")
+                logger.info(f"Logging to: {log_file}")
 
     def load_data(self):
         self.simlib = json.loads((resources.files(data) / "simlib_db.json").read_text())
@@ -56,15 +58,13 @@ class EngineState:
             } 
     
     def connect_engine(self):
-        try:
-            import matlab.engine 
-        except ImportError:
-            raise ImportError("MATLAB Engine for Python package not found.")
-        sessions = matlab.engine.find_matlab() or []
-        if sessions:
-            self.session = sessions[0]
-            self.eng = matlab.engine.connect_matlab(self.session)
-            self.helpers = self.add_helpers()
+        if self.installed == 1:
+            import matlab.engine
+            sessions = matlab.engine.find_matlab() or []
+            if sessions:
+                self.session = sessions[0]
+                self.eng = matlab.engine.connect_matlab(self.session)
+                self.helpers = self.add_helpers()
 
     def add_helpers(self):
         if getattr(sys, "frozen", False):
@@ -73,6 +73,26 @@ class EngineState:
             pth = get_full_path(matlab_simulink_mcp, "data/helpers")
         self.eng.addpath(str(pth), nargout=0)
         return Path(pth)
+    
+    def ensure_engine(self):
+        try:
+            import matlab.engine 
+        except ImportError:
+            logger.info("MATLAB Engine for Python package not found. Starting package installer...")
+            import matlab_simulink_mcp.installer.launcher as launcher
+            self.installed = launcher.run()
+            if self.installed == 1:
+                try:
+                    import matlab.engine
+                    logger.info("MATLAB engine package successfully installed.")
+                except ImportError:
+                    raise ImportError("MATLAB Engine package not available even after attempted install.")
+            elif self.installed != -1:
+                raise RuntimeError("Failed to install MATLAB engine package. " \
+                "This server requires MATLAB engine package to work.. " \
+                "You can try installing it manually from PyPi or your MATLAB installation.")
+            
+
     
     
 

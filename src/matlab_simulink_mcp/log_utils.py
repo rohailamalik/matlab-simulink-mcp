@@ -1,9 +1,4 @@
-import sys
-import logging
-import platform
-import subprocess
-import shutil
-import time
+import sys, logging, platform, subprocess, shutil
 
 from pathlib import Path
 from platformdirs import user_log_dir
