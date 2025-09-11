@@ -1,7 +1,4 @@
-import asyncio
-import sys
-import inspect
-import time
+import inspect, time
 from fastmcp import FastMCP
 from contextlib import asynccontextmanager
 
@@ -49,9 +46,9 @@ def run(console: bool=False):
     except Exception as e:
         if hasattr(e, "exceptions"): 
             for sub in e.exceptions:
-                logger.error(f"{type(sub).__name__}, {sub}")
+                logger.error(f"{sub}")
         else:
-            logger.error(f"{type(e).__name__}: {e}")
-        sys.exit(1)
+            logger.error(f"{e}")
+        #sys.exit(1)
 
  

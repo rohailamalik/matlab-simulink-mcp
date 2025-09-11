@@ -1,5 +1,4 @@
-import asyncio
-import tempfile
+import asyncio, tempfile
 from pathlib import Path
 from difflib import SequenceMatcher
 
