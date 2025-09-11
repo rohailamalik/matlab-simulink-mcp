@@ -60,8 +60,8 @@ Without uv:
     
 4. On first run, if the MATLAB Engine is not installed, the server will open a console window and guide you through installation.
 
-* This requires admin permission and the server will request for it.
-* If you prefer to install manually, install a [matching matlabengine version](https://pypi.org/project/matlabengine/#history) from PyPI or from your [MATLAB installation](https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html).
+    - This requires admin permission and the server will request for it.
+    - If you prefer to install manually, install a [matching PyPi version](https://pypi.org/project/matlabengine/#history) or from your [MATLAB installation](https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html).
 
 
 
@@ -76,11 +76,11 @@ Without uv:
     ```json
     {
     "mcpServers": {
-        "MatlabMCP": {
-        "command": "absolute-path-to/.venv/Scripts/python", 
+        "MATLAB_Simulink_MCP": {
+        "command": "C:/Data/Research/Doctoral/src/matlab-simulink-mcp/.venv/Scripts/python.exe",
         "args": ["-m", "matlab_simulink_mcp"]
         }
-    }
+      }
     }
     ```
 
@@ -97,15 +97,11 @@ Without uv:
 
 6. Check running status in Settings → Developer, or click the equalizer button in the chat box.
 
-7. Logs:
+7. The server logs outputs and errors to both Claude's and its own log file. To keep a log file tracking console open, add `--console` in Claude config args.
 
-Claude MCP logs:
-
-Windows: `%APPDATA%\Claude\logs\mcp-server-MatlabMCP.log`
-
-macOS: `~/Library/Logs/Claude/mcp-server-MatlabMCP.log`
-
-Server logs: written to your user log directory (or configured via `.env`).
+    - Claude MCP logs (Windows): `%APPDATA%\Claude\logs\mcp-server-MatlabMCP.log`
+    - Claude MCP logs (macOS): `~/Library/Logs/Claude/mcp-server-MatlabMCP.log`
+    - Server logs: written to your user log directory (or configured via `.env`).
 
 
 ## Debugging
