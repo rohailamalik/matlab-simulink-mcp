@@ -21,12 +21,6 @@ This Model Context Protocol (MCP) server allows MCP clients (such as Claude Desk
 
 ## Installation
 
-### Option 1 — Download Binary (MATLAB R2025a only)
-
-If you don’t want to interact with Python at all, you can download a prebuilt **exe/app** from the [Releases](../../releases) page and run it directly. In that case you can skip the steps below.
-
-### Option 2 — From Source
-
 1. Clone the repository:
 
    ```bash
@@ -44,7 +38,7 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     Without uv, first download a Python version manually, then run:
 
     ```bash
-    python3.12 -m venv .venv # match Python to your MATLAB-supported version
+    python3.12 -m venv .venv        # match Python to your MATLAB-supported version
     source .venv/Scripts/activate   # on macOS/Linux: source .venv/bin/activate
     pip install -r requirements.txt
     pip install .
@@ -83,8 +77,6 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
     ```
 
     On macOS/Linux, use `absolute-path-to/.venv/bin/python` in `command`.
-
-    If using the standalone exe/app, just put absolute path to it in `command` and omit args.
 
     **Note**: Only use `/` or `\\` in the paths, not `\`.
 

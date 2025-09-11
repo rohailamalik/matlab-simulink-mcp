@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+*.spec
 
 # Environments
 .venv
@@ -20,3 +21,4 @@ slprj/
 # Testing
 tests/
 
+help.txt
