@@ -37,12 +37,13 @@ If you don’t want to interact with Python at all, you can download a prebuilt 
 
 2. Create a Python virtual environment (recommended: uv):
     ```bash
-    uv venv --python 3.12    # match Python to your MATLAB-supported version
+    uv venv --python 3.12           # match Python to your MATLAB-supported version
     source .venv/Scripts/activate   # on macOS/Linux: source .venv/bin/activate
     uv sync
     ```
 
 Without uv:
+
     ```bash
     python3.12 -m venv .venv
     source .venv/bin/activate
@@ -83,11 +84,11 @@ Without uv:
     }
     ```
 
-On macOS/Linux, use `absolute-path-to/.venv/bin/python` in `command`.
+    On macOS/Linux, use `absolute-path-to/.venv/bin/python` in `command`.
 
-If using the standalone exe/app, just point command to the binary and omit args.
+    If using the standalone exe/app, just put absolute path to it in `command` and omit args.
 
-**Note**: Only use `/` or `\\` in the paths, not `\`.
+    **Note**: Only use `/` or `\\` in the paths, not `\`.
 
 
 4. Save and restart Claude Desktop. (Ensure it is fully closed in Task Manager/Activity Monitor.)
@@ -109,14 +110,12 @@ Server logs: written to your user log directory (or configured via `.env`).
 
 ## Debugging
 
-FastMCP 2.0 includes an MCP Inspector for manual testing without an LLM client. This launches a UI to send dummy requests directly to the server. 
+FastMCP 2.0 includes an MCP Inspector for manual testing without an LLM client. This launches a UI to send dummy requests directly to the server.
 
     ```bash
     cd scripts
     fastmcp dev debugger.py
     ```
-
-
 
 ## Repository Structure
 ```
@@ -145,15 +144,18 @@ matlab-simulink-mcp/
 ## FAQ
 
 Q: Which Python version should I install?
+
 A: Match it to the highest Python version supported by your MATLAB release (see MathWorks docs).
 
 Q: The console disappears too quickly!
+
 A: Add `--console` in your Claude config args to keep the server console open.
 
 Q: Multiple installer consoles opened on first run.
+
 A: This is expected if Claude sends multiple startup requests. Complete one installation, then restart Claude Desktop.
 
 
-# Contributiing 
+# Contributing 
 
 Pull requests are welcome! Feel free to submit one or open an issue. 
