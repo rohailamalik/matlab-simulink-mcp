@@ -1,94 +1,113 @@
-import sys, ctypes, platform, time, subprocess
+import platform, subprocess, sys, time, ctypes
 from pathlib import Path
-
 
 system = platform.system()
 
-def verify_matlab_path(user_input: str) -> Path | None:
-    """Validate that a user-specified directory contains MATLAB Engine setup."""
-    while True:
-        if not user_input:
-            print("Aborting installation operation.")
-            return None
 
-        path = Path(user_input).expanduser().resolve()
-        if path.is_dir():
-            setup_path = path / "extern" / "engines" / "python" / "setup.py"
-            if setup_path.exists():
-                return setup_path.parent
-            else:
-                user_input = input(
-                    f"MATLAB Python engine setup not found at {setup_path}.\n"
-                    f"Please enter a valid MATLAB installation directory or press Enter to abort: "
-                ).strip()
-        else:
-            user_input = input(
-                "Invalid directory. Please enter a correct path to a MATLAB installation, or press Enter to abort: "
-            ).strip()
+def find_default_installations() -> list[Path]:
+    """Looks for MATLAB in default installation directories."""
 
-
-def get_matlab_path() -> Path | None:
-    system = platform.system()
-    if system == "Windows": 
-        parent = Path("C:/Program Files/MATLAB") 
-    elif system == "Linux": 
-        parent = Path("/usr/local/MATLAB") 
-    elif system == "Darwin": 
-        parent = Path("/Applications") 
-    else: 
+    if system == "Windows":
+        parent = Path("C:/Program Files/MATLAB")
+    elif system == "Linux":
+        parent = Path("/usr/local/MATLAB")
+    elif system == "Darwin":
+        parent = Path("/Applications")
+    else:
         raise OSError(f"Unsupported OS: {system}.")
 
-    installations = [p for p in parent.glob("R20[2-9][0-9][ab]*") if p.is_dir()]
-    installations.sort()
+    if not parent.exists():
+        return []
 
-    try:
-        if not installations:
-            print("No MATLAB installations found in default directories.")
-            choice = input("Please enter a path to MATLAB installation (or press Enter to abort): ").strip()
-            return verify_matlab_path(choice)
+    return [p for p in parent.glob("R20[2-9][0-9][ab]*") if p.is_dir()]
 
-        elif len(installations) == 1:
-            matlab_path = installations[0]
-            print(f"Found a MATLAB installation at {matlab_path}")
-            choice = input(
-                "Enter y to install MATLAB Engine from this installation (requires admin permissions), \n "
-                "or enter another path (or press Enter to abort): "
-            ).strip()
-            if choice.lower() == "y":
-                return verify_matlab_path(str(matlab_path))
-            else:
-                return verify_matlab_path(choice)
 
-        else:  # multiple installs
-            print("Multiple MATLAB installations found:")
-            for i, inst in enumerate(installations, 1):
-                print(f"[{i}] {inst}")
+def prompt_yes_no(message: str) -> bool:
+    """Prompt user with a yes/no/quit question."""
+    while True:
+        choice = input(f"{message} [Y/N/q]: ").strip().lower()
+        if choice in ("y", "yes"):
+            return True
+        elif choice in ("n", "no"):
+            return False
+        elif choice == "q":
+            raise KeyboardInterrupt
+        else:
+            print("Invalid choice. Please enter 'Y', 'N', or 'q'.")
 
-            while True:
-                choice = input("Select installation by number (installing requires admin permissions), \n "
-                "Or, Enter another installation path (or press Enter to abort): ").strip()
-                if not choice:
-                    print("Aborting by user choice.")
-                    return None
-                if choice.isdigit():
-                    idx = int(choice)
-                    if 1 <= idx <= len(installations):
-                        return verify_matlab_path(str(installations[idx - 1]))
-                    else:
-                        print("Invalid selection.")
-                        continue
-                else:
-                    return verify_matlab_path(choice)
 
-    except KeyboardInterrupt:
-        print("Aborted by user (Ctrl+C).")
-        return None
+def get_setup_path(matlab_root: Path) -> Path | None:
+    """Validate if setup.py exists, and then confirm with user"""
+    setup_path = matlab_root / "extern" / "engines" / "python" / "setup.py"
     
+    if not setup_path.exists():
+        print(f"No MATLAB engine setup found in: {matlab_root}")
+    elif prompt_yes_no(f"Install MATLAB engine from {setup_path}?"):
+        return setup_path
+    return None
 
-from matlab_simulink_mcp.installer import win_elevate
-win_install_log = "install.log"
+
+def prompt_for_matlab_path() -> Path:
+    """Ask user to provide a MATLAB installation path until valid."""
+    while True:
+        user_input = input("Enter path to MATLAB root directory ('q' to quit): ").strip()
+        if not user_input:
+            continue
+        if user_input.lower() == "q":
+            raise KeyboardInterrupt
+
+        matlab_root = Path(user_input)
+        if setup_path := get_setup_path(matlab_root):
+            return setup_path
+
+
+def choose_from_installations(installations: list[Path]) -> Path:
+    """Let the user pick from multiple MATLAB installations."""
+    print("Multiple MATLAB installations found:")
+    for i, inst in enumerate(installations, start=1):
+        print(f"[{i}] {inst}")
+
+    while True:
+        choice = input("Enter number of installation to use, "
+                       "'0' to enter a custom path, or 'q' to quit: ").strip().lower()
+
+        if choice == "q":
+            raise KeyboardInterrupt
+        if choice == "0":
+            return prompt_for_matlab_path()
+        if choice.isdigit():
+            idx = int(choice)
+            if 1 <= idx <= len(installations):
+                matlab_root = installations[idx - 1]
+                if setup_path := get_setup_path(matlab_root):
+                    return setup_path
+        else:
+            print("Invalid selection.")
+
+
+def resolve_installation_path() -> Path:
+    """Get a confirmed path to MATLAB engine's setup.py"""
+    installations = find_default_installations()
+
+    if not installations:
+        print("No MATLAB installation found in default directories.")
+        return prompt_for_matlab_path()
+
+    if len(installations) == 1:
+        matlab_root = installations[0]
+        print(f"MATLAB installation found at: {matlab_root}")
+        if setup_path := get_setup_path(matlab_root):
+            return setup_path
+        return prompt_for_matlab_path()
+
+    return choose_from_installations(installations)
+
 
 def install_engine_win(setup_path: Path):
+    
+    from matlab_simulink_mcp.installer import win_elevate
+    win_install_log = "install.log"
+
     script = Path(win_elevate.__file__).resolve()
     status = script.with_name(win_install_log)
 
@@ -118,43 +137,47 @@ def install_engine_mac_linux(setup_path: Path):
         ["sudo", sys.executable, "setup.py", "install"],
         cwd=setup_path,
         check=True)
-
+    
 
 def install_engine():
-    try: 
-        print("***MATLAB Engine for Python API Package Installer***")
-        print("This process will install the matlab.engine package from a MATLAB installation on this machine. \n")
-        setup_path = get_matlab_path()
-        if not setup_path:
-            sys.exit(1)
+    """Main installation routine for MATLAB Engine."""
+    try:
+        print("*** MATLAB Engine for Python API Package Installer ***")
+        print("This process will install the matlab.engine package "
+              "from a MATLAB installation on this machine.\n")
+        input("Press Enter to continue...")
 
-        print(f"Installing MATLAB engine into current Python environment from: \n {setup_path}")
+        setup_dir = resolve_installation_path().parent
 
-        time.sleep(2) # Wait for a while so that user sees that they need to grant permission.
+        print(f"Installing MATLAB engine from: {setup_dir}")
+        print("Requesting permission for installation...")
+        time.sleep(2)  
 
+        system = platform.system()
         if system == "Windows":
-            install_engine_win(setup_path)
-        elif system in ["Linux", "Darwin"]:
-            install_engine_mac_linux(setup_path)
+            install_engine_win(setup_dir)
+        elif system in ("Linux", "Darwin"):
+            install_engine_mac_linux(setup_dir)
+              
         else:
             raise OSError(f"Unsupported OS: {system}.")
-        
-        print(f"Installation completed successfully.")
-        sys.exit(0)
+
+        time.sleep(2) # wait for package to be recognized
+        input("Installation completed successfully. Press Enter to close...")
+        return 0
 
     except KeyboardInterrupt:
-        print("Aborted by user (Ctrl+C).")
-        sys.exit(1)
-        
+        print("\nAborting installation process...")
+        time.sleep(1)
+        return 1
+
     except Exception as e:
-        print(str(e))
-        quit = input("Press any key to close.")
-        if quit: 
-            sys.exit(1)
+        print(f"Error: {e}")
+        input("Press Enter to close...")
+        return 1
+
 
 if __name__ == "__main__":
-    install_engine()
+    sys.exit(install_engine())
 
-
-
-                
+   
