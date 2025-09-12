@@ -20,7 +20,7 @@ def create_log_file(filename: str, dir: Path | None) -> Path:
             dir = None
 
     if dir is None:
-        dir = user_log_dir(filename.stem, appauthor=False)
+        dir = Path(user_log_dir(filename.stem, appauthor=False))
         dir.mkdir(parents=True, exist_ok=True)
 
     return dir / filename
