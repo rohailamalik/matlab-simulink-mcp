@@ -1,4 +1,4 @@
-import os, types, json, sys
+import os, types, json, sys, time
 
 from pathlib import Path
 from importlib import resources
@@ -77,8 +77,10 @@ class EngineState:
     def ensure_engine(self):
         try:
             import matlab.engine 
+            self.installed = 1
         except ImportError:
-            logger.info("MATLAB Engine for Python package not found. Starting package installer...")
+            logger.info("MATLAB Engine for Python package not found. Launching installer....")
+            time.sleep(1)
             import matlab_simulink_mcp.installer.launcher as launcher
             self.installed = launcher.run()
             if self.installed == 1:
