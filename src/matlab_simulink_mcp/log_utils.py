@@ -50,13 +50,13 @@ def create_logger(name: str, log_file: Path) -> logging.Logger:
 
 
 class TrailingConsole:
+    """A console that tails a log file"""
     def __init__(self, log_file: Path):
         self.log_file = str(log_file)
         self.viewer_process = None
 
     def open(self):
-        """Open a console window that tails the log file."""
-
+        
         if self.viewer_process and self.viewer_process.poll() is None:
             return  # already open
 
