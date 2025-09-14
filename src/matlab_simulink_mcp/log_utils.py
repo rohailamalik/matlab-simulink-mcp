@@ -4,7 +4,6 @@ from pathlib import Path
 from platformdirs import user_log_dir
 from logging.handlers import RotatingFileHandler
 
-
 def create_log_file(filename: str, dir: Path | None) -> Path:
     """Creates a log file in the given directory or user log directory (if former fails or isn't specified)."""
 
@@ -24,7 +23,6 @@ def create_log_file(filename: str, dir: Path | None) -> Path:
         dir.mkdir(parents=True, exist_ok=True)
 
     return dir / filename
-
 
 def create_logger(name: str, log_file: Path) -> logging.Logger:
     """Sets up a logger with stderr console and rotating file handlers."""
@@ -47,8 +45,6 @@ def create_logger(name: str, log_file: Path) -> logging.Logger:
     logger.addHandler(fh)
 
     return logger
-
-
 class TrailingConsole:
     """A console that tails a log file"""
     def __init__(self, log_file: Path):
@@ -103,7 +99,6 @@ class TrailingConsole:
         if self.viewer_process and self.viewer_process.poll() is None:
             self.viewer_process.terminate()
             self.viewer_process = None
-
 
 def create_console(log_file: Path) -> TrailingConsole:
     return TrailingConsole(log_file)

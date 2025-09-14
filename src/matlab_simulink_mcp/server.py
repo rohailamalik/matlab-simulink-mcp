@@ -10,6 +10,7 @@ console = False
 # Create lifespan function
 @asynccontextmanager
 async def lifespan(server): # do not remove server argument as it will break stuff
+    """Launch pre-reqs for the server as context accessible during its run"""
     log_console.open()
     time.sleep(1)
 

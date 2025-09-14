@@ -11,6 +11,7 @@ from matlab_simulink_mcp.log_utils import create_log_file, create_logger, create
 
 
 def get_full_path(pkg: types.ModuleType, path: str | Path) -> Path:
+    """Absolutizes a path relative to a given package. Returns as is if already absolute"""
     if path is None:
         return None
     path = Path(path)
@@ -28,6 +29,7 @@ logger = create_logger(name=matlab_simulink_mcp.__name__, log_file=log_file)
 
 @dataclass
 class EngineState:
+    """State for holding MATLAB engine and other data throughout the server lifespan"""
     installed: int = 0
     session: str | None = None
     eng = None # Don't put typehint here since engine may not be installed
