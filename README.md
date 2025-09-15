@@ -10,8 +10,8 @@ This Model Context Protocol (MCP) server allows MCP clients (such as Claude Desk
 - Read, write, and run MATLAB code and scripts
 - Parse and interact with Simulink files
 - Access MATLAB workspace variables and outputs (including visualizations)
-- Basic safety layer to prevent execution of unsafe commands (configurable)
-- Non-blocking execution (async MATLAB engine calls)
+- Basic safety layer to prevent execution of unsafe commands in LLM generated code
+- Non-blocking execution (asyncronous MATLAB engine calls)
 - Automatic installation of MATLAB Engine package if unavailable
 
 ## Requirements
@@ -35,7 +35,7 @@ This Model Context Protocol (MCP) server allows MCP clients (such as Claude Desk
     uv sync
     ```
 
-    Without uv, first download a Python version manually, then run:
+    If not using uv, first download the required Python version manually, then run:
 
     ```bash
     python3.12 -m venv .venv        # match Python to your MATLAB-supported version
@@ -44,7 +44,7 @@ This Model Context Protocol (MCP) server allows MCP clients (such as Claude Desk
     pip install .
     ```
 
-3. Alternatively, skip step 1, create virtual environment and install directly via PyPI:
+3. Alternatively, create the virtual environment and install directly from PyPi:
 
     ```bash
     uv pip install matlab-simulink-mcp
@@ -54,23 +54,27 @@ This Model Context Protocol (MCP) server allows MCP clients (such as Claude Desk
 
 4. On the first run, if the MATLAB Engine is not installed, the server will open a console window and guide you through installation.
 
-    - This requires admin permission and the server will request for it.
+    - This requires admin permission and the application will request for it.
     - If you prefer to install manually, install a [matching PyPi version](https://pypi.org/project/matlabengine/#history) or from your [MATLAB installation](https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html).
 
 ## Configuration (Claude Desktop)
 
-1. Install [Claude Desktop](https://claude.ai/download).
+1. Open [Claude Desktop](https://claude.ai/download) Settings → Developer → Edit Config.
 
-2. Open Settings → Developer → Edit Config.
-
-3. In the `claude_desktop_config.json`, add or update:
+2. In the `claude_desktop_config.json`, add or update:
 
     ```json
     {
     "mcpServers": {
         "MATLAB_Simulink_MCP": {
-            "command": "absolute-path-to/.venv/Scripts/python.exe", // absolute path to your venv/global environment executable
-            "args": ["-m", "matlab_simulink_mcp"]
+            "command": "absolute-path-to/.venv/Scripts/python.exe", // absolute path to your Python environment executable
+            "args": [
+                "-m", 
+                "matlab_simulink_mcp"
+                ],
+            "env": {
+                "LOG_DIR": "absolute-path-to/logs" // Optional: absolute path to a folder for logs.
+                }
             }
         }
     }
@@ -80,21 +84,22 @@ This Model Context Protocol (MCP) server allows MCP clients (such as Claude Desk
 
     **Note**: Only use `/` or `\\` in the paths, not `\`.
 
-4. Save and restart Claude Desktop. (Ensure it is fully closed in Task Manager/Activity Monitor.)
+3. Save and restart Claude Desktop. (Ensure it is fully closed in Task Manager/Activity Monitor.)
 
-5. On first launch, the server may open multiple consoles to install MATLAB Engine. Interact with one, complete installation, then restart Claude if needed.
+4. On first launch, the server may open multiple consoles to install MATLAB Engine. Interact with one, complete installation, then restart Claude if needed.
 
-6. Check running status in Settings → Developer, or click the equalizer button in Claude's chat box.
+5. Check server status in Settings → Developer, or click the equalizer button in Claude's chat box.
 
-7. The server logs outputs and errors to both Claude's and its own log file. To keep a log file tracking console open, add `--console` in Claude config args.
+6. Prompt Claude to write, run or read MATLAB code, scripts or Simulink models. Claude (and any client) is restricted to the current MATLAB working directory, which can only be changed manually for security reasons.
 
-    - Claude MCP logs (Windows): `%APPDATA%\Claude\logs\mcp-server-MatlabMCP.log`
-    - Claude MCP logs (macOS): `~/Library/Logs/Claude/mcp-server-MatlabMCP.log`
-    - Server logs: written to your user log directory (or configured via `.env`).
+7. The server logs outputs and errors to both Claude's and its own log file. To keep a log file tracking console open, add `--console` to Claude config args.
+
+    - Claude MCP logs: `\logs\mcp-server-MatlabMCP.log` in the same folder as `claude_desktop_config.json`.
+    - Server logs: In the folder specified via environment variable `LOG_DIR`, user log directory otherwise.
 
 ## Debugging
 
-FastMCP 2.0 includes an MCP Inspector for manual testing without an LLM client. It launches a UI to send dummy requests directly to the server.
+FastMCP 2.0 includes an MCP Inspector for manual testing without an LLM client. It launches a UI to send dummy requests directly to the server. To use it, run:
 
 ```bash
 cd scripts
@@ -127,21 +132,3 @@ matlab-simulink-mcp/
 └─ README.md                # This file
 
 ```
-
-## FAQ
-
-- Q: Which Python version should I install?
-  
-- A: Match it to the highest Python version supported by your MATLAB release (see MathWorks docs).
-
-- Q: The console disappears too quickly!
-
-- A: Add `--console` in your Claude config args to keep the server console open.
-
-- Q: Multiple installer consoles opened on first run.
-
-- A: This is expected if Claude sends multiple startup requests. Complete one installation, then restart Claude Desktop.
-
-## Contributing
-
-Pull requests are welcome! Feel free to submit one or open an issue.
