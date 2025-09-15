@@ -68,7 +68,7 @@ This Model Context Protocol (MCP) server allows MCP clients (such as Claude Desk
 
 7. The server logs outputs and errors to both Claude's and its own log file. To keep a log file tracking console open, add `--console` to Claude config args.
 
-    - Claude MCP logs: `\logs\mcp-server-MatlabMCP.log` in the same folder as `claude_desktop_config.json`.
+    - Claude MCP logs: `/logs/mcp-server-MatlabMCP.log` in the same folder as `claude_desktop_config.json`.
     - Server logs: In the folder specified via environment variable `LOG_DIR`, user log directory otherwise.
 
 ## Debugging
