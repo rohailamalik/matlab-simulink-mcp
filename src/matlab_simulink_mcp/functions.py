@@ -147,6 +147,7 @@ async def run_matlab_code(code: str, get_images: bool=False) -> tuple[str, *tupl
             abs_path.parent.mkdir(parents=True, exist_ok=True) 
             with abs_path.open("w") as f:
                 f.write(code)
+            pretext = None
         except PermissionError:
             with tempfile.NamedTemporaryFile("w", suffix=".m", delete=False) as f:
                 f.write(code)
