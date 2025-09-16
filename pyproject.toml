@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "matlab-simulink-mcp"
-version = "0.1.3"
+version = "0.1.4"
 description = "An MCP server for allowing LLMs to interact with MATLAB and Simulink"
 authors = [
   { name = "Rohail"}
@@ -31,12 +31,13 @@ dependencies = [
 
 [tool.setuptools]
 include-package-data = true
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"matlab_simulink_mcp" = ["data/*.txt", "data/*.json", "data/helpers/*.m"]
+"matlab_simulink_mcp" = ["data/*", "data/**/*"]
 
 [project.scripts]
 matlab_simulink_mcp = "matlab_simulink_mcp.__main__:main"
