@@ -112,7 +112,7 @@ This **Model Context Protocol (MCP)** server lets MCP clients (such as Claude De
 
 ## Debugging
 
-FastMCP 2.0 includes an [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for manual testing and debugging without an LLM client. It launches a web UI to send dummy requests directly to the server. To use it, run the following code and then click on connect in the UI:
+FastMCP 2.0 includes an [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for manual testing and debugging without an LLM client. It finds and runs a server object named `mcp` in a web UI to send dummy requests directly to the server. Therefore, to use it, you will need to run a script containing `matlab_simulink_mcp.server.mcp`
 
 ```bash
 cd scripts

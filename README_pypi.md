@@ -61,7 +61,7 @@ This **Model Context Protocol (MCP)** server lets MCP clients (such as Claude De
     {
     "mcpServers": {
         "MATLAB_Simulink_MCP": {
-            "command": "<absolute-path-to>/.venv/Scripts/python.exe", // absolute path vto your Python environment executable
+            "command": "<absolute-path-to>/.venv/Scripts/python.exe", // absolute path to your Python environment executable
             "args": [
                 "-m", 
                 "matlab_simulink_mcp"
@@ -93,9 +93,8 @@ This **Model Context Protocol (MCP)** server lets MCP clients (such as Claude De
 
 ## Debugging
 
-FastMCP 2.0 includes an [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for manual testing and debugging without an LLM client. It launches a web UI to send dummy requests directly to the server. To use it, run the following code and then click on connect in the UI:
+FastMCP 2.0 includes an [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for manual testing and debugging without an LLM client. It launches a web UI to send dummy requests directly to the server. The inspector finds and runs a server object named `mcp` itself so you will need to import it using `from matlab_simulink_mcp.server import mcp` in a script and then run the script:
 
 ```bash
-cd scripts
-fastmcp dev debugger.py
+fastmcp dev script_name.py
 ```
