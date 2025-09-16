@@ -43,7 +43,7 @@ mcp = FastMCP(
 def run(console: bool=False):
     try:
         console = console
-        mcp.run(transport="stdio", show_banner=False) # TODO: removed banner on startup
+        mcp.run(transport="stdio", show_banner=False)
     except Exception as e:
         if hasattr(e, "exceptions"): 
             for sub in e.exceptions:
