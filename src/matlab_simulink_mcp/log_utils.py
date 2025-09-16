@@ -1,7 +1,7 @@
 import sys, logging, platform, subprocess, shutil
 
 from pathlib import Path
-from platformdirs import user_log_dir
+from platformdirs import user_log_path
 from logging.handlers import RotatingFileHandler
 
 def create_log_file(filename: str, dir: Path | None) -> Path:
@@ -19,7 +19,7 @@ def create_log_file(filename: str, dir: Path | None) -> Path:
             dir = None
 
     if dir is None:
-        dir = Path(user_log_dir(filename.stem, appauthor=False))
+        dir = user_log_path(filename.stem, appauthor=False)
         dir.mkdir(parents=True, exist_ok=True)
 
     return dir / filename
