@@ -43,13 +43,13 @@ mcp = FastMCP(
 def run(console: bool=False):
     try:
         console = console
-        mcp.run(transport="stdio")
+        mcp.run(transport="stdio", show_banner=False) # TODO: removed banner on startup
     except Exception as e:
         if hasattr(e, "exceptions"): 
             for sub in e.exceptions:
-                logger.error(f"{sub}")
+                logger.exception(f"{sub}")
         else:
-            logger.error(f"{e}")
+            logger.exception(f"{e}")
         #sys.exit(1)
 
  
