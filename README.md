@@ -107,12 +107,12 @@ This **Model Context Protocol (MCP)** server lets MCP clients (such as Claude De
 
 7. The server logs outputs and errors to both Claude's and its own log file. To keep a log file tracking console open, add `"--console"` to Claude config args.
 
-    - Claude logs: `/logs/mcp-server-MatlabMCP.log` in the same folder as `claude_desktop_config.json`.
+    - Claude logs: `/logs/mcp-server-MATLAB_Simulink_MCP.log` in the same folder as `claude_desktop_config.json`.
     - Server logs: In the folder specified via environment variable `LOG_DIR`, user log directory otherwise.
 
 ## Debugging
 
-FastMCP 2.0 includes an [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for manual testing and debugging without an LLM client. It finds and runs a server object named `mcp` in a web UI to send dummy requests directly to the server. Therefore, to use it, you will need to run a script containing `matlab_simulink_mcp.server.mcp`
+FastMCP 2.0 includes an [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for manual testing and debugging without an LLM client. It finds and runs a server object named `mcp` in a web UI to send dummy requests directly to the server. Therefore, to launch it, you will need to run a script containing `matlab_simulink_mcp.server.mcp`:
 
 ```bash
 cd scripts
