@@ -56,9 +56,9 @@ async def access_matlab() -> str:
 
 async def read_simulink_system(path: str, detail: bool=False, open: bool=False) -> Image | dict:
     """
-    View a Simulink system/subsystem as either a PNG image or a detailed dictionary (if detail=True).
+    View a Simulink system/subsystem as either a PNG image or a JSON dictionary (if detail=True).
     Optionally open the object in MATLAB desktop.
-    Detail only recommended when exact port tags or other details are needed, as it can be verbose.
+    Dictionary recommended as image can be cost intensive.
     """
 
     eng = _get_engine()
@@ -143,7 +143,7 @@ async def run_matlab_code(code: str, get_images: bool=False) -> tuple[str, *tupl
 
         try:
             cwd = await asyncio.to_thread(eng.pwd, nargout=1)
-            abs_path = Path(str(cwd)) / "canvas.m"
+            abs_path = Path(str(cwd)) / "temp_file_for_executing_code.m"
             abs_path.parent.mkdir(parents=True, exist_ok=True) 
             with abs_path.open("w") as f:
                 f.write(code)

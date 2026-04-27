@@ -17,6 +17,7 @@ slprj/
 
 # Logs
 *.log
+logs/
 
 # Testing
 tests/

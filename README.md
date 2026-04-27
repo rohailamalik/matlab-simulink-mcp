@@ -70,7 +70,9 @@ This **Model Context Protocol (MCP)** server lets MCP clients (such as Claude De
     - This requires admin permission and the application will request for it.
     - If you prefer to install manually, install a [matching PyPI version](https://pypi.org/project/matlabengine/#history) or from your [MATLAB installation](https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html).
 
-## Configuration (Claude Desktop)
+## Configuration
+
+### Claude Desktop
 
 1. Open [Claude Desktop](https://claude.ai/download) Settings → Developer → Edit Config.
 
@@ -93,22 +95,37 @@ This **Model Context Protocol (MCP)** server lets MCP clients (such as Claude De
     }
     ```
 
-    On macOS/Linux, use `<absolute-path-to>/.venv/bin/python` in `command`.
-
-    **Note**: Only use `/` or `\\` in the paths, not `\`.
-
 3. Save and restart Claude Desktop. (Ensure it is fully closed in Task Manager/Activity Monitor.)
 
-4. On first launch, the server may open multiple consoles to install MATLAB Engine. Interact with one, complete installation, then restart Claude if needed.
+4. Server's status can be checked from Settings → Developer, or the equalizer button in Claude's chat box.
 
-5. Server's status can be checked from Settings → Developer, or the equalizer button in Claude's chat box.
+### Claude Code / Codex CLI
 
-6. Prompt Claude to write, run or read MATLAB code, scripts or Simulink models. Claude (and any client) is restricted to the current MATLAB working directory, which can only be changed manually for safety reasons.
+1. Run the following command in terminal:
 
-7. The server logs outputs and errors to both Claude's and its own log file. To keep a log file tracking console open, add `"--console"` to Claude config args.
+    ```bash
+    claude mcp add MATLAB_Simulink_MCP --env LOG_DIR="<absolute-path-to>/logs" -- "<absolute-path-to>/.venv/bin/python" -m matlab_simulink_mcp
+    ```
 
-    - Claude logs: `/logs/mcp-server-MATLAB_Simulink_MCP.log` in the same folder as `claude_desktop_config.json`.
-    - Server logs: In the folder specified via environment variable `LOG_DIR`, user log directory otherwise.
+    For Codex CLI, use ```codex``` instead of ```claude```.
+
+2. Restart by opening a new terminal.
+
+3. To check server status, run ```claude mcp list``` or ```codex mcp list```.
+
+For more information, see documentation for [Claude Code](https://code.claude.com/docs/en/mcp#option-3%3A-add-a-local-stdio-server) or [Codex CLI](https://developers.openai.com/codex/mcp).
+
+### Notes
+
+1. On macOS/Linux, use `<absolute-path-to>/.venv/bin/python` instead for the path to Python.
+
+2. Only use `/` or `\\` in the paths, not `\`.
+
+3. On first launch, the server may open multiple consoles to install MATLAB Engine. Interact with one, complete installation, then restart the application if needed.
+
+4. Any client is restricted to the current MATLAB working directory, which can only be changed manually for safety reasons.
+
+5. The server logs outputs and errors its own log file as well. To keep a log file tracking console open, add `"--console"` to config args. The log file is in the folder specified via environment variable `LOG_DIR`, or otherwise in the user log directory.
 
 ## Debugging
 
@@ -142,6 +159,4 @@ matlab-simulink-mcp/
 ├─ pyproject.toml           # Project metadata and dependencies
 ├─ requirements.txt         # Package dependencies for pip
 ├─ uv.lock                  # Package dependencies for uv
-└─ README.md                # This file
-
 ```
